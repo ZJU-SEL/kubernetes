@@ -1,0 +1,1 @@
+ETCD_OPTS="-name MY_IP -addr MY_IP:4001 -peer-addr MY_IP:7001"
