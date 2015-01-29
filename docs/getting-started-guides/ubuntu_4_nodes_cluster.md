@@ -6,9 +6,10 @@ This post describes how to deploy kubernetes on multiple ubuntu nodes, including
 Although there exists saltstack based ubuntu k8s installation ,  it may be tedious and hard for a guy that knows little about saltstack but want to build a really distributed k8s cluster. This approach is inspired by [k8s deploy on a single node](https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/getting-started-guides/ubuntu_single_node.md)
 
 ### **Prerequisites：**
-
 *1 The minion nodes have installed docker version 1.2+* 
+
 *2  All machines can communicate with each orther*
+
 *3 These scripts only tested on Ubuntu 14.04 LTS 64bit, but it should work in most distributions*
 
 
@@ -49,17 +50,23 @@ Enter the k8s master node IP address > 10.10.0.88
 
 #### ３ Start all components
   1. On the master node:
+  
      `sudo service etcd start`
+
      Then on every minion node:
-	 `sudo service etcd start`
+     
+     `sudo service etcd start`
 	 
-	 NOTE:  This **start order must be kept**．
+     NOTE:  This **start order must be kept**．
 	
   2. On any node:
+  
      `$ etcdctl mk /coreos.com/network/config '{"Network":"10.0.0.0/16"}'`
+     
      This command will configure the flannel overlay network, we just use the default configuration. 
      
-	 Now, you can run the below command on another node to comfirm if the network setting is correct.
+     Now, you can run the below command on another node to comfirm if the network setting is correct.
+     
      `$ etcdctl get /coreos.com/network/config`
      
      If you got `{"Network":"10.0.0.0/16"}`，then etcd cluster is working in good condition. **Victory is in sight！**
@@ -67,16 +74,19 @@ Enter the k8s master node IP address > 10.10.0.88
 	
 	
   3. On every minion node
+     
      `sudo service flanneld start`
 	
-	 You can use ifconfig to see if there is a new network interface named `flannel0` coming up.
-	 Then run `sudo ./reconfigureDocker.sh` to alter the docker daemon settings.
+     You can use ifconfig to see if there is a new network interface named `flannel0` coming up.
+     Then run `sudo ./reconfigureDocker.sh` to alter the docker daemon settings.
 	 
 	
   4. Back to master node and start kube-apiserver ，kube-scheduler and kube-controller-manager:
-     `sudo service kube-apiserver start && service kube-scheduler start && service kube-controller-manager start`
+     
+    `sudo service kube-apiserver start && service kube-scheduler start && service kube-controller-manager start`
 	
   5. Back to every minion node to start kubelet and kube-proxy:
+    
     `sudo service kubelet start && service kube-proxy start`
 
 #### 4 Post Check
