@@ -51,11 +51,11 @@ Enter the k8s master node IP address > 10.10.0.88
 #### ３ Start all components
   1. On the master node:
   
-     `sudo service etcd start`
+     `$ sudo service etcd start`
 
      Then on every minion node:
      
-     `sudo service etcd start`
+     `$ sudo service etcd start`
 	 
      NOTE:  This **start order must be kept**．
 	
@@ -75,19 +75,26 @@ Enter the k8s master node IP address > 10.10.0.88
 	
   3. On every minion node
      
-     `sudo service flanneld start`
+     `$ sudo service flanneld start`
 	
      You can use ifconfig to see if there is a new network interface named `flannel0` coming up.
-     Then run `sudo ./reconfigureDocker.sh` to alter the docker daemon settings.
+     
+     Then run `$ sudo ./reconfigureDocker.sh` to alter the docker daemon settings.
 	 
 	
   4. Back to master node and start kube-apiserver ，kube-scheduler and kube-controller-manager:
      
-    `sudo service kube-apiserver start && service kube-scheduler start && service kube-controller-manager start`
+     `$ sudo service kube-apiserver start`
+    
+     `$ sudo service kube-scheduler start `
+
+     `$ sudo service kube-controller-manager start`
 	
   5. Back to every minion node to start kubelet and kube-proxy:
     
-    `sudo service kubelet start && service kube-proxy start`
+     `$ sudo service kubelet start`
+
+     `$ sudo service kube-proxy start`
 
 #### 4 Post Check
-　 You can use kubectl command to see if the newly created k8s is working correctly. For example , `kubectl get minions` to see if you get all your minion nodes comming up. Also you can run kubernetes [guest-example](https://github.com/GoogleCloudPlatform/kubernetes/tree/master/examples/guestbook) to build a redis backend cluster on the k8s．
+　 You can use kubectl command to see if the newly created k8s is working correctly. For example , `$ kubectl get minions` to see if you get all your minion nodes comming up. Also you can run kubernetes [guest-example](https://github.com/GoogleCloudPlatform/kubernetes/tree/master/examples/guestbook) to build a redis backend cluster on the k8s．
