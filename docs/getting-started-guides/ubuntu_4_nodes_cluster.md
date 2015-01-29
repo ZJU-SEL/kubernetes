@@ -83,13 +83,16 @@ Enter the k8s master node IP address > 10.10.0.88
 	
   4. Back to master node and start kube-apiserver ，kube-scheduler and kube-controller-manager:
      
-    `sudo service kube-apiserver start 
+    `sudo service kube-apiserver start
+
 　   sudo service kube-scheduler start 
+　   
      sudo service kube-controller-manager start`
 	
   5. Back to every minion node to start kubelet and kube-proxy:
     
     `sudo service kubelet start 
+
      sudo service kube-proxy start`
 
 #### 4 Post Check
