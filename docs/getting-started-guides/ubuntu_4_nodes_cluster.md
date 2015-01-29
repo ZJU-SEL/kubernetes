@@ -96,5 +96,6 @@ Enter the k8s master node IP address > 10.10.0.88
 
      `$ sudo service kube-proxy start`
 
+
 #### 4 Post Check
 　 You can use kubectl command to see if the newly created k8s is working correctly. For example , `$ kubectl get minions` to see if you get all your minion nodes comming up. Also you can run kubernetes [guest-example](https://github.com/GoogleCloudPlatform/kubernetes/tree/master/examples/guestbook) to build a redis backend cluster on the k8s．
