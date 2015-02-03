@@ -38,7 +38,7 @@ while true; do
 	if [ "$isEtcdNew" == "y" ] || [ "isEtcdNew" == "Y" ]; then
 	    # we use static etcd configuration 
 		# see https://github.com/coreos/etcd/blob/master/Documentation/clustering.md#static
-		read -p "please enter your etcd cluster configuration like \"name_1=url1,name_2=url2,name_3=url3,name_4=url4\" > " cluster
+		read -p "Please enter your etcd cluster configuration like \"name_1=url_1,name_2=url_2,name_3=url_3\" > " cluster
 		echo
 	fi
 
@@ -46,7 +46,7 @@ while true; do
 	    [Yy]* )
 	        if [ "$isEtcdNew" == "y" ] || [ "isEtcdNew" == "Y" ]; then
 	        	# 2.0 version etcd
-	        	read -p "Enter this machine's name, must be the same with the above configuration like name_1 if you on ip_1 machine > " name
+	        	read -p "Enter this machine's name, must be the same with the above configuration like 'name_1' if you on 'ip_1' machine > " name
 	        	echo
 	        	read -p "Enter your k8s master IP address > " myIP
 	        	echo ETCD_OPTS=\"-name ${name} -initial-advertise-peer-urls http://${myIP}:2380 -listen-peer-urls http://${myIP}:2380 -initial-cluster-token etcd-cluster-1 -initial-cluster ${cluster} -initial-cluster-state new\" > default_scripts/etcd
@@ -65,7 +65,7 @@ while true; do
 	    [Nn]* )
             if [ "$isEtcdNew" == "y" ] || [ "isEtcdNew" == "Y" ]; then
             	# 2.0 version etcd 
-            	read -p "Enter this machine's name, must be the same with the above configuration like name_2 if you on ip_2 machine > " name
+            	read -p "Enter this machine's name, must be the same with the above configuration like 'name_2' if you on 'ip_2' machine > " name
             	echo
             	read -p "Enter your k8s minion IP address > " myIP
                 echo
