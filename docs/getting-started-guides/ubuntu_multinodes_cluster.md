@@ -21,6 +21,7 @@ This document describes how to deploy kubernetes on multiple ubuntu nodes, inclu
 
 #### ２ Configue and install every components upstart script
 The example cluster is as below:
+
 |Name| IP Address|Role |      
 |------|---------|------|
 |infra0|10.10.103.223| minion|
