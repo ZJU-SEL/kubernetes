@@ -1,2 +1,1 @@
-# The etcd_opts will be filled by configure.sh
-ETCD_OPTS="-name MY_IP -addr MY_IP:4001 -peer-addr MY_IP:7001"
+ETCD_OPTS="-name infra1 -initial-advertise-peer-urls http://10.10.103.250:2380 -listen-peer-urls http://10.10.103.250:2380 -initial-cluster-token etcd-cluster-1 -initial-cluster infra1=10.10.103.250,infra2=10.10.103.223,infra3=10.10.103.224 -initial-cluster-state new"

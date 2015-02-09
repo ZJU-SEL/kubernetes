@@ -17,7 +17,7 @@ This document describes how to deploy kubernetes on multiple ubuntu nodes, inclu
 
 2.  Similarly fetch an `etcd` and `etcdctl` binary from [etcd releases](https://github.com/coreos/etcd/releases) or build them using instructions at [coreos etcd github main page](https://github.com/coreos/etcd). Then copy the `etcd` and `etcdctl` binary into `/opt/bin` of every node.  
 
-> **NOTE:** etcd stable version have recently upgraded from 0.4.6 to 2.0.0 This guide supports both two versions. You can choose whatever version you like. If you'd like to use advanced features of etcd, please choose 2.0+
+> **NOTE:** etcd stable version have recently upgraded from 0.4.6 to 2.0.0 This guide supports 2.0.0 only.
  
 3. We use flanneld to build an overlay network across multiple minion machines. Follow  the instructions on [coreos flanneld github main page](https://github.com/coreos/flannel) to build an executable binary. Then copy the `flanneld` binary into `/opt/bin` of every node.
 
@@ -26,92 +26,72 @@ This document describes how to deploy kubernetes on multiple ubuntu nodes, inclu
 #### II. Configue and install every components upstart script
 The example cluster is listed as below:
 
-|Name| IP Address|Role |      
-|------|---------|------|
-|infra0|10.10.103.223| minion|
-|infra1|10.10.103.224| minion|
-|infra2|10.10.103.162| minion|
-|infra3|10.10.103.250| master|
+| IP Address|Role |      
+|---------|------|
+|10.10.103.223| minion|
+|10.10.103.224| minion|
+|10.10.103.162| minion|
+|10.10.103.250| master|
 
-First of all, copy the cluster/ubuntu-cluster dirctory to **every node including both master and minon nodes**，and run `cluster/ubuntu-cluster/configue.sh` interactively to **on every node**.
-
-If you are using **etcd 0.4.6**:
-
-On master node( 10.10.103.250 ):
-```
-$ cd ubuntu-cluster
-$ sudo ./configure.sh 
-Welcome to use this script to configure k8s setup
-
-Configure a master node press Y/y, configure a minion node press N/n > y
-
-Use 2.0.0 version etcd press Y/y, Use 0.4.6 version etcd press N/n > n
-
-Enter your k8s master IP address > 10.10.103.250
-
-Enter your k8s minion IP addresses, comma separated like '<ip_1>,<ip_2>,<ip_3>' > 10.10.103.223,10.10.103.224,10.10.103.162
-```
-
-On every minion node( e.g. 10.10.103.223 ):
-
-```
-$ cd cluster/ubuntu-cluster
-$ sudo ./configure.sh 
-Welcome to use this script to configure k8s setup
-
-Configure a master node press Y/y, configure a minion node press N/n > n
-
-Use 2.0.0 version etcd press Y/y, Use 0.4.6 version etcd press N/n > n
-
-Enter your k8s minion IP address > 10.10.103.223
-
-Enter the k8s master node IP address > 10.10.103.250
-```
-
-If you are using **etcd 2.0.0**
-
-You may need write down this setting (or remember it in your mind) so that you can copy and paste this long config string in the next steps. The string is like:
-```
-infra0=http://10.10.103.223:2380,infra1=http://10.10.103.224:2380,infra2=http://10.10.103.162:2380,infra3=http://10.10.103.250:2380
-```
-This string will be used in the following part to fill in the etcd `-initial-cluster` option. It is a little tedious and long , please do check it is correct. For more information , see [etcd doc](https://github.com/coreos/etcd/blob/master/Documentation/clustering.md#static).
+First of all, copy the cluster/ubuntu-cluster dirctory to **every node including both master and minon nodes**，and run `cluster/ubuntu-cluster/configue.sh` interactively  **on every node**.
 
 
-On master( infra3 10.10.103.250 ) node:
+> **NOTE:** The first input must be the same on every node , or the etcd will fail to start.
+
+
+On master( infra1 10.10.103.250 ) node:
+
 ```
 $ cd cluster/ubuntu-cluster
 $ sudo ./configure.sh
-Welcome to use this script to configure k8s setup
+Welcome to use this script to configure k8s setup by ZJU-SEL
 
-Configure a master node press Y/y, configure a minion node press N/n > y
+Please enter all your cluster node ips, master node comes first
+And separated with blank space like "<ip_1> <ip2> <ip3> 10.10.103.250 10.10.103.223 10.10.103.224 10.10.103.162
 
-Use 2.0.0 version etcd press Y/y, Use 0.4.6 version etcd press N/n > y
+Configure a master node press Y/y, configure a minion node press N/n
+If this machine is running as both master and minion node press B/b > y
 
-Please enter your etcd cluster configuration like "name_1=url_1,name_2=url_2,name_3=url_3" > infra0=http://10.10.103.223:2380,infra1=http://10.10.103.224:2380,infra2=http://10.10.103.162:2380,infra3=http://10.10.103.250:2380
+Enter IP address of this machine > 10.10.103.250
 
-Enter this machine's name, must be the same with the above configuration like 'name_1' if you on 'ip_1' machine > infra3
-
-Enter your k8s master IP address > 10.10.103.250
-
-Enter your k8s minion IP addresses, comma separated like '<ip_1>,<ip_2>,<ip_3>' > 10.10.103.223,10.10.103.224,10.10.103.162
 
 ```
-On every minion ( e.g. infra2 10.10.103.162 ) node:
+
+On every minion ( e.g.  10.10.103.224 ) node:
+
 
 ```
 $ cd cluster/ubuntu-cluster
 $ sudo ./configure.sh 
-Welcome to use this script to configure k8s setup
+Welcome to use this script to configure k8s setup by ZJU-SEL
 
-Configure a master node press Y/y, configure a minion node press N/n > n
+Please enter all your cluster node ips, master node comes first
+And separated with blank space like "<ip_1> <ip2> <ip3> 10.10.103.250 10.10.103.223 10.10.103.224 10.10.103.162
 
-Use 2.0.0 version etcd press Y/y, Use 0.4.6 version etcd press N/n > y
+Configure a master node press Y/y, configure a minion node press N/n
+If this machine is running as both master and minion node press B/b > n
 
-Please enter your etcd cluster configuration like "name_1=url_1,name_2=url_2,name_3=url_3" > infra0=http://10.10.103.223:2380,infra1=http://10.10.103.224:2380,infra2=http://10.10.103.162:2380,infra3=http://10.10.103.250:2380
+Enter IP address of this machine > 10.10.103.224
+```
 
-Enter this machine's name, must be the same with the above configuration like 'name_2' if you on 'ip_2' machine > infra2
 
-Enter your k8s minion IP address > 10.10.103.162
+If you want a node both running the master and minion,  you can press "b" on the second input. Just like below:
+
+
+```
+$ cd cluster/ubuntu-cluster
+$ sudo ./configure.sh 
+Welcome to use this script to configure k8s setup by ZJU-SEL
+
+Please enter all your cluster node ips, master node comes first
+And separated with blank space like "<ip_1> <ip2> <ip3> 10.10.103.250 10.10.103.223 10.10.103.224
+
+Configure a master node press Y/y, configure a minion node press N/n
+If this machine is running as both master and minion node press B/b > b
+
+Enter IP address of this machine > 10.10.103.250 
+
+
 ```
 
  **You can also customize your own settings in `/etc/default/{component_name}` in the future !**
@@ -124,8 +104,6 @@ Enter your k8s minion IP address > 10.10.103.162
      Then on every minion node:
      
      `$ sudo service etcd start`
-   
-     **NOTE:** Start order must be kept if you use etcd 0.4.6
   
   2. On any node:
   
@@ -142,28 +120,13 @@ Enter your k8s minion IP address > 10.10.103.162
   
   
   3. On every minion node
-     
-     `$ sudo service flanneld start`
   
      You can use ifconfig to see if there is a new network interface named `flannel0` coming up.
      
      Then run `$ sudo ./reconfigureDocker.sh` to alter the docker daemon settings.
-   
-  
-  4. Back to master node and start kube-apiserver ，kube-scheduler and kube-controller-manager:
-     
-     `$ sudo service kube-apiserver start`
-    
-     `$ sudo service kube-scheduler start `
+ 
 
-     `$ sudo service kube-controller-manager start`
-  
-  5. Back to every minion node to start kubelet and kube-proxy:
-    
-     `$ sudo service kubelet start`
-
-     `$ sudo service kube-proxy start`
-
+**All done !**
 
 #### IV. Validation
 You can use kubectl command to see if the newly created k8s is working correctly. 
