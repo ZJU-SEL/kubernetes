@@ -17,7 +17,7 @@
 # simple use the sed to replace some ip settings on user's demand
 # Run as root only
 
-# author ZJU-SEL http://www.sel.zju.edu.cn/
+# author @WIZARD-CXY @resouer
 
 set -e
 
@@ -61,30 +61,46 @@ function cpMinion(){
     cp default_scripts/kubelet /etc/default/
 }
 
+# check if input IP in machine list
+function inList(){
+	if [ "$#" -eq 1 ]; then
+		echo -e "\e[0;31mERROR\e[0m: "$1" is not in your machine list."
+		exit 1
+	fi
+}
+
+# set values in ETCD_OPTS
+function configEtcd(){
+    echo ETCD_OPTS=\"-name $1 -initial-advertise-peer-urls http://$2:2380 -listen-peer-urls http://$2:2380 -initial-cluster-token etcd-cluster-1 -initial-cluster $3 -initial-cluster-state new\" > default_scripts/etcd	
+}
+
+# check root
 if [ "$(id -u)" != "0" ]; then
     echo >&2 "Please run as root"
     exit 1
 fi
 
-echo "Welcome to use this script to configure k8s setup by ZJU-SEL"
+echo "Welcome to use this script to configure k8s setup"
 
 echo
 
 PATH=$PATH:/opt/bin
 
+# use ubuntu
 if ! $(grep Ubuntu /etc/lsb-release > /dev/null 2>&1)
 then
     echo "warning: not detecting a ubuntu system"
     exit 1
 fi
 
+# check etcd
 if ! $(which etcd > /dev/null)
 then
     echo "warning: etcd binary is not found in the PATH: $PATH"
     exit 1
 fi
 
-
+# check kube commands
 if ! $(which kube-apiserver > /dev/null) && ! $(which kubelet > /dev/null)
 then
     echo "warning: kube binaries are not found in the $PATH"
@@ -99,27 +115,27 @@ if [ "$etcdVersion" != "2.0.0" ]; then
 	exit 1
 fi
 
+
+# use an array to record name and ip
 declare -A mm
-
 ii=1
-
 # we use static etcd configuration 
 # see https://github.com/coreos/etcd/blob/master/Documentation/clustering.md#static
-echo "Please enter all your cluster node ips, master node comes first"
-read -p "And separated with blank space like \"<ip_1> <ip2> <ip3> " etcdIPs
-# use an array to record name and ip
+echo "Please enter all your cluster node ips, MASTER node comes first"
+read -p "And separated with blank space like \"<ip_1> <ip_2> <ip_3>\": " etcdIPs
+
 for i in $etcdIPs
 do
     name="infra"$ii
-    item="$name=$i"
+    item="$name=http://$i:2380"
     if [ "$ii" == 1 ]; then 
         cluster=$item
     else
         cluster="$cluster,$item"
         if [ "$ii" -gt 2 ]; then
-        	minionIPs="$minionIPs,$i"
+        	    minionIPs="$minionIPs,$i"
         else
-        	minionIPs="$i"
+        	    minionIPs="$i"
         fi
     fi
     mm[$i]=$name
@@ -127,38 +143,48 @@ do
 done
 echo 
 
+# input node IPs
 while true; do
-	echo "Configure a master node press Y/y, configure a minion node press N/n"
-	read -p "If this machine is running as both master and minion node press B/b > " option 
+    echo "This machine acts as"
+    echo -e "  both MASTER and MINION:      \033[1m1\033[0m"
+    echo -e "  only MASTER:                 \033[1m2\033[0m"
+    echo -e "  only MINION:                 \033[1m3\033[0m"
+	read -p "Please choose a role > " option 
     echo
 
 	case $option in
-	    [Yy]* )
-        	read -p "Enter IP address of this machine > " myIP
-        	etcdName=${mm[$myIP]}
-        	echo ETCD_OPTS=\"-name ${etcdName} -initial-advertise-peer-urls http://${myIP}:2380 -listen-peer-urls http://${myIP}:2380 -initial-cluster-token etcd-cluster-1 -initial-cluster ${cluster} -initial-cluster-state new\" > default_scripts/etcd
-	        sed -i "s/MINION_IPS/${minionIPs}/g" default_scripts/kube-controller-manager 
+	    [1] )
+        	read -p "IP address of this machine > " myIP
+            echo
+            etcdName=${mm[$myIP]}
+            inList $etcdName $myIP 
+            configEtcd $etcdName $myIP $cluster
+            # set MINION IPs in kube-controller-manager
+            sed -i "s/MINION_IPS/${minionIPs}/g" default_scripts/kube-controller-manager  
 	        cpMaster
 	        break
 	        ;;
-	    [Nn]* )     
-        	read -p "Enter IP address of this machine > " myIP
-            echo
-           
+	    [2] )     
+        	read -p "IP address of this machine > " myIP
+            echo           
             etcdName=${mm[$myIP]}
-            echo ETCD_OPTS=\"-name ${etcdName} -initial-advertise-peer-urls http://${myIP}:2380 -listen-peer-urls http://${myIP}:2380 -initial-cluster-token etcd-cluster-1 -initial-cluster ${cluster} -initial-cluster-state new\" > default_scripts/etcd
-	        sed -i "s/MY_IP/${myIP}/g" default_scripts/kubelet
-	        
+            inList $etcdName $myIP 
+            configEtcd $etcdName $myIP $cluster
+            # set MINION IP in default_scripts/kubelet
+            sed -i "s/MY_IP/${myIP}/g" default_scripts/kubelet
 	        cpMinion
 	        break
 	        ;;
-	    [Bb]* )
-        	read -p "Enter IP address of this machine > " myIP
+	    [3] )
+        	read -p "IP address of this machine > " myIP
             echo 
             etcdName=${mm[$myIP]}
-            echo ETCD_OPTS=\"-name ${etcdName} -initial-advertise-peer-urls http://${myIP}:2380 -listen-peer-urls http://${myIP}:2380 -initial-cluster-token etcd-cluster-1 -initial-cluster ${cluster} -initial-cluster-state new\" > default_scripts/etcd
-	        sed -i "s/MY_IP/${myIP}/g" default_scripts/kubelet 
-
+            inList $etcdName $myIP 
+            configEtcd $etcdName $myIP $cluster
+            # For minion set MINION IP in default_scripts/kubelet
+            sed -i "s/MY_IP/${myIP}/g" default_scripts/kubelet 
+            
+            # For master set MINION IPs in kube-controller-manager
 	        minionIPs="$minionIPs,$myIP"       
 	        sed -i "s/MINION_IPS/${minionIPs}/g" default_scripts/kube-controller-manager
 	        
@@ -167,7 +193,9 @@ while true; do
 	        break
 	        ;;
 	    * )
-	        echo "Please answer Y/y or N/n or B/b."
+	        echo "Please choose 1 or 2 or 3."
 	        ;;
 	esac
 done
+
+echo -e "\e[0;32mConfigure Success\033[0m"
