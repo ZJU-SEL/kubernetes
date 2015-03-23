@@ -995,16 +995,31 @@ const (
 // createPodInfraContainer starts the pod infra container for a pod. Returns the docker container ID of the newly created container.
 func (kl *Kubelet) createPodInfraContainer(pod *api.Pod) (dockertools.DockerID, error) {
 	var ports []api.ContainerPort
+	var networkID string
 	// Docker only exports ports from the pod infra container.  Let's
 	// collect all of the relevant ports and export them.
+	// get the specified network env
 	for _, container := range pod.Spec.Containers {
 		ports = append(ports, container.Ports...)
+
+		for _, env := range container.Env {
+			if env.Name == "NETWORK" {
+				networkID = env.Value
+			}
+
+		}
 	}
 	container := &api.Container{
 		Name:  dockertools.PodInfraContainerName,
 		Image: kl.podInfraContainerImage,
 		Ports: ports,
 	}
+
+	//set the network id
+	if networkID != "" {
+		container.Env = append(container.Env, api.EnvVar{Name: "SP_NETWORK", Value: networkID})
+	}
+
 	ref, err := containerRef(pod, container)
 	if err != nil {
 		glog.Errorf("Couldn't make a ref to pod %v, container %v: '%v'", pod.Name, container.Name, err)
@@ -1025,6 +1040,7 @@ func (kl *Kubelet) createPodInfraContainer(pod *api.Pod) (dockertools.DockerID, 
 	if ref != nil {
 		kl.recorder.Eventf(ref, "pulled", "Successfully pulled image %q", container.Image)
 	}
+
 	id, err := kl.runContainer(pod, container, nil, "", "")
 	if err != nil {
 		return "", err
