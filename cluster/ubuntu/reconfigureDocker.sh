@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# script to reconfigue the docker daemon network settings 
+# script to reconfigue the docker daemon network settings on every minion node
 
 # Run as root only
 if [ "$(id -u)" != "0" ]; then
@@ -27,6 +27,8 @@ brctl delbr docker0
 
 source /run/flannel/subnet.env
 
+# Extra options to set on the Docker server daemon configuration.  This is useful for setting
+# --insecure-registry for local registries.
 echo DOCKER_OPTS=\"-H tcp://127.0.0.1:4243 -H unix:///var/run/docker.sock \
     --bip=${FLANNEL_SUBNET} --mtu=${FLANNEL_MTU}\" > /etc/default/docker
 

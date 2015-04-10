@@ -1,9 +1,1 @@
-# Etcd Upstart and SysVinit configuration file
-
-# Customize etcd location 
-# ETCD="/opt/bin/etcd"
-
-# Use ETCD_OPTS to modify the start/restart options
-ETCD_OPTS="-listen-client-urls=http://127.0.0.1:4001"
-
-# Add more envionrment settings used by etcd here
+ETCD_OPTS="-name infra1 -initial-advertise-peer-urls http://10.10.105.65:2380 -listen-peer-urls http://10.10.105.65:2380 -initial-cluster-token etcd-cluster-1 -initial-cluster infra1=http://10.10.105.65:2380 -initial-cluster-state new"

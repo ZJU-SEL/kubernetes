@@ -4,7 +4,8 @@
 # KUBE_APISERVER="/opt/bin/kube-apiserver"
 
 # Use KUBE_APISERVER_OPTS to modify the start/restart options
-KUBE_APISERVER_OPTS="--address=127.0.0.1 \
+
+KUBE_APISERVER_OPTS="--address=0.0.0.0 \
 --port=8080 \
 --etcd_servers=http://127.0.0.1:4001 \
 --logtostderr=true \
