@@ -5,7 +5,7 @@
 
 # Use KUBE_CONTROLLER_MANAGER_OPTS to modify the start/restart options
 KUBE_CONTROLLER_MANAGER_OPTS="--master=127.0.0.1:8080 \
---machines=127.0.0.1 \
+--machines=MINION_IPS \
 --logtostderr=true"
 
 # Add more envionrment settings used by kube-controller-manager here
