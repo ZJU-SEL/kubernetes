@@ -120,6 +120,17 @@ elif [[ "$KUBERNETES_PROVIDER" == "vagrant" ]]; then
   config=(
     "--kubeconfig=$HOME/.kubernetes_vagrant_kubeconfig"
   )
+
+elif [[ "$KUBERNETES_PROVIDER" == "libvirt-coreos" ]]; then
+  detect-master > /dev/null
+  config=(
+    "--server=http://${KUBE_MASTER_IP}:8080"
+  )
+elif [[ "$KUBERNETES_PROVIDER" == "ubuntu" ]]; then
+  detect-master > /dev/null
+  config=(
+    "--server=http://${KUBE_MASTER_IP}:8080"
+  )
 fi
 
 echo "current-context: \"$(${kubectl} "${config[@]:+${config[@]}}" config view -o template --template='{{index . "current-context"}}')\"" >&2
