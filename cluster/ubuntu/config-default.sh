@@ -16,26 +16,22 @@
 
 ## Contains configuration values for the Ubuntu cluster
 
-# set the number of minions in the cluster
-NUM_MINIONS=3
-NUM_MINIONS=${NUM_MINIONS-"1"}
-export NUM_MINIONS
-# The ips of the minions, separated by blank space
-MINION_IPS="10.10.103.162 10.10.103.223 10.10.103.224"
-
-# The IP of the master
-export MASTER_IP="10.10.103.250"
-
-PORTAL_NET=11.1.1.0/24
-
-# copy the ssh public key to the minion and master server
-PULIC_KEY_LOCATION="~/.ssh/id_rsa.pub"
+# Define all your cluster nodes, MASTER node comes first"
+# And separated with blank space like <user_1@ip_1> <user_2@ip_2> <user_3@ip_3> 
+export nodes="vcap@10.10.103.250 vcap@10.10.103.162 vcap@10.10.103.223"
+# Define all your nodes role: a(master) or i(minion) or ai(both master and minion), must be the order same 
+export roles=("ai" "i" "i")
+# Define minion numbers
+NUM_MINIONS=${NUM_MINIONS:-3}
+# define the IP range used for service portal
+export PORTAL_NET=11.1.1.0/24
 
 # Admission Controllers to invoke prior to persisting objects in cluster
 ADMISSION_CONTROL=NamespaceLifecycle,NamespaceAutoProvision,LimitRanger,ResourceQuota
 
 # Optional: Install node monitoring.
 ENABLE_NODE_MONITORING=true
+
 
 # Optional: Enable node logging.
 ENABLE_NODE_LOGGING=false

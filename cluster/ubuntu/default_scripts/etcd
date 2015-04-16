@@ -1,1 +1,0 @@
-ETCD_OPTS="-name infra1 -initial-advertise-peer-urls http://10.10.105.65:2380 -listen-peer-urls http://10.10.105.65:2380 -initial-cluster-token etcd-cluster-1 -initial-cluster infra1=http://10.10.105.65:2380 -initial-cluster-state new"

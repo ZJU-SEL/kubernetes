@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Download the etcd, flannel, and K8s binaries automatically
+# Download the etcd, flannel, and K8s binaries automatically and stored in binaries directory
 # Run as root only
 
 # author @resouer @WIZARD-CXY
@@ -60,7 +60,7 @@ cp $ETCD/etcd $ETCD/etcdctl binaries
 # k8s
 echo "Download kubernetes release ..."
 
-K8S_V="v0.13.2"
+K8S_V="v0.15.0"
 if [ ! -f kubernetes.tar.gz ] ; then
     curl -L https://github.com/GoogleCloudPlatform/kubernetes/releases/download/$K8S_V/kubernetes.tar.gz -o kubernetes.tar.gz
     tar xzf kubernetes.tar.gz
