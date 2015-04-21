@@ -22,7 +22,7 @@ export nodes="vcap@10.10.103.250 vcap@10.10.103.162 vcap@10.10.103.223"
 # Define all your nodes role: a(master) or i(minion) or ai(both master and minion), must be the order same 
 export roles=("ai" "i" "i")
 # Define minion numbers
-NUM_MINIONS=${NUM_MINIONS:-3}
+export NUM_MINIONS=${NUM_MINIONS:-3}
 # define the IP range used for service portal
 export PORTAL_NET=11.1.1.0/24
 
