@@ -1,11 +1,27 @@
 #!/bin/bash
-# Run as root only
+
+# Copyright 2015 Google Inc. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # reconfigure docker network setting
 
 if [ "$(id -u)" != "0" ]; then
   echo >&2 "Please run as root"
   exit 1
 fi
+
+source ~/kube/config-default.sh
 
 attempt=0
 while true; do
@@ -19,14 +35,14 @@ while true; do
       exit 2
     fi
 
-    /opt/bin/etcdctl mk /coreos.com/network/config '{"Network":"10.0.0.0/16"}'
+    /opt/bin/etcdctl mk /coreos.com/network/config "{\"Network\":\"${FLANNEL_NET}\"}"
     attempt=$((attempt+1))
     sleep 3
   fi
 done
 
-#wait some secs for flannel ready
-sleep 10
+#wait some secs for /run/flannel/subnet.env ready
+sleep 15
 sudo ip link set dev docker0 down
 sudo brctl delbr docker0
 

@@ -51,22 +51,6 @@ attempt=0
 while true; do
   kubectl_output=$("${KUBE_ROOT}/cluster/kubectl.sh" get cs) || true
 
-  # On vSphere, use minion IPs as their names
-  if [[ "${KUBERNETES_PROVIDER}" == "vsphere" ]] || [[ "${KUBERNETES_PROVIDER}" == "vagrant" ]] || [[ "${KUBERNETES_PROVIDER}" == "libvirt-coreos" ]] || [[ "${KUBERNETES_PROVIDER}" == "ubuntu" ]]; then
-    MINION_NAMES=("${KUBE_MINION_IP_ADDRESSES[@]}")
-  fi
-
-  # On AWS we can't really name the minions, so just trust that if the number is right, the right names are there.
-  if [[ "${KUBERNETES_PROVIDER}" == "aws" ]]; then
-    MINION_NAMES=("$(cat ${MINIONS_FILE})")
-    # /healthz validation isn't working for some reason on AWS.  So just hope for the best.
-    # TODO: figure out why and fix, it must be working in some form, or else clusters wouldn't work.
-    echo "Kubelet health checking on AWS isn't currently supported, assuming everything is good..."
-    echo -e "${color_green}Cluster validation succeeded${color_norm}"
-    exit 0
-  fi
-
-
   # The "kubectl componentstatuses" output is four columns like this:
   #
   #     COMPONENT            HEALTH    MSG       ERR
@@ -82,38 +66,6 @@ while true; do
   if ((non_success_count > 1)); then
     if ((attempt < 5)); then
       echo -e "${color_yellow}Cluster not working yet.${color_norm}"
-
-    name="${MINION_NAMES[$i]}"
-    if [ "$KUBERNETES_PROVIDER" != "vsphere" ] && [ "$KUBERNETES_PROVIDER" != "vagrant" ] && [ "$KUBERNETES_PROVIDER" != "libvirt-coreos" ] && [ "$KUBERNETES_PROVIDER" != "ubuntu" ]; then
-      # Grab fully qualified name
-      name=$(grep "${MINION_NAMES[$i]}\." "${MINIONS_FILE}")
-    fi
-
-    # Make sure the kubelet is healthy.
-    # Make several attempts to deal with slow cluster birth.
-    attempt=0
-    while true; do
-      echo -n "Attempt $((attempt+1)) at checking Kubelet installation on node ${MINION_NAMES[$i]} ..."
-      if [ "$KUBERNETES_PROVIDER" != "libvirt-coreos" ] && [ "$KUBERNETES_PROVIDER" != "ubuntu" ]; then
-        curl_output=$(curl -s --insecure --user "${KUBE_USER}:${KUBE_PASSWORD}" \
-          "https://${KUBE_MASTER_IP}/api/v1beta1/proxy/minions/${name}/healthz")
-      else
-        curl_output=$(curl -s \
-          "http://${KUBE_MASTER_IP}:8080/api/v1beta1/proxy/minions/${name}/healthz")
-      fi
-      if [[ "${curl_output}" != "ok" ]]; then
-          if (( attempt > 5 )); then
-            echo
-            echo -e "${color_red}Kubelet failed to install on node ${MINION_NAMES[$i]}. Your cluster is unlikely to work correctly."
-            echo -e "Please run ./cluster/kube-down.sh and re-create the cluster. (sorry!)${color_norm}"
-            exit 1
-          fi
-      else
-          echo -e " ${color_green}[working]${color_norm}"
-          break
-      fi
-      echo -e " ${color_yellow}[not working yet]${color_norm}"
-
       attempt=$((attempt+1))
       sleep 30
     else

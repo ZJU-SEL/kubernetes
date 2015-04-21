@@ -22,16 +22,18 @@ export nodes="vcap@10.10.103.250 vcap@10.10.103.162 vcap@10.10.103.223"
 # Define all your nodes role: a(master) or i(minion) or ai(both master and minion), must be the order same 
 export roles=("ai" "i" "i")
 # Define minion numbers
-NUM_MINIONS=${NUM_MINIONS:-3}
-# define the IP range used for service portal
-export PORTAL_NET=11.1.1.0/24
+export NUM_MINIONS=${NUM_MINIONS:-3}
+# define the IP range used for service portal.
+# according to rfc 1918 ref: https://tools.ietf.org/html/rfc1918 choose a private ip range here.
+export PORTAL_NET=192.168.3.0/24
+# define the IP range used for flannel overlay network, should not conflict with above PORTAL_NET range
+export FLANNEL_NET=172.16.0.0/16
 
 # Admission Controllers to invoke prior to persisting objects in cluster
 ADMISSION_CONTROL=NamespaceLifecycle,NamespaceAutoProvision,LimitRanger,ResourceQuota
 
 # Optional: Install node monitoring.
 ENABLE_NODE_MONITORING=true
-
 
 # Optional: Enable node logging.
 ENABLE_NODE_LOGGING=false

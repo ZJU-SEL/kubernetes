@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # A library of helper functions that each provider hosting Kubernetes must implement to use cluster/kube-*.sh scripts.
-set -ex
+set -e
 
 SSH_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null -oLogLevel=ERROR"
 
@@ -66,10 +66,12 @@ function setClusterInfo() {
 }
 
 
-# Verify prereqs, ensuring the binaries is downloaded.
+# Verify ssh prereqs
 function verify-prereqs {
-  if [ ! -f "ubuntu/binaries/kube-apiserver" ]; then
-    echo "warning: not enough binaries to build k8s, please run build.sh in cluster/ubuntu first"
+   # Expect at least one identity to be available.
+  if ! ssh-add -L 1> /dev/null 2> /dev/null; then
+    echo "Could not find or add an SSH identity."
+    echo "Please start ssh-agent, add your identity, and retry."
     exit 1
   fi
 }
@@ -182,7 +184,7 @@ KUBE_APISERVER_OPTS="--address=0.0.0.0 \
 --port=8080 \
 --etcd_servers=http://127.0.0.1:4001 \
 --logtostderr=true \
---portal_net=11.1.1.0/24"
+--portal_net=${1}"
 EOF
 }
 
@@ -304,6 +306,12 @@ function kube-up {
   KUBE_ROOT=$(dirname "${BASH_SOURCE}")/../..
   source "${KUBE_ROOT}/cluster/ubuntu/${KUBE_CONFIG_FILE-"config-default.sh"}"
 
+  # ensure the binaries are downloaded
+  if [ ! -f "ubuntu/binaries/kube-apiserver" ]; then
+    echo "warning: not enough binaries to build k8s, please run build.sh in cluster/ubuntu first"
+    exit 1
+  fi
+
   setClusterInfo
   ii=0
 
@@ -333,6 +341,7 @@ function kube-up {
 function provision-master() {
   # copy the binaries and scripts to the ~/kube directory on the master
   echo "Deploying master on machine ${MASTER_IP}"
+  echo 
   ssh $SSH_OPTS $MASTER "mkdir -p ~/kube/default"
   scp -r $SSH_OPTS ubuntu/config-default.sh ubuntu/util.sh ubuntu/master/* ubuntu/binaries/ "${MASTER}:~/kube"
 
@@ -371,8 +380,9 @@ function provision-minion() {
 function provision-masterandminion() {
   # copy the binaries and scripts to the ~/kube directory on the master
   echo "Deploying master and minion on machine ${MASTER_IP}"
+  echo 
   ssh $SSH_OPTS $MASTER "mkdir -p ~/kube/default"
-  scp -r $SSH_OPTS ubuntu/config-default.sh ubuntu/util.sh ubuntu/master/* ubuntu/minion/* ubuntu/binaries/ "${MASTER}:~/kube"
+  scp -r $SSH_OPTS ubuntu/config-default.sh ubuntu/util.sh ubuntu/master/* ubuntu/reconfDocker.sh ubuntu/minion/* ubuntu/binaries/ "${MASTER}:~/kube"
 
   # remote login to the node and use sudo to configue k8s
   ssh $SSH_OPTS -t $MASTER "source ~/kube/util.sh; \
@@ -398,8 +408,8 @@ function kube-down {
   for i in ${nodes}; do
   {
     echo "Cleaning on node ${i#*@}"
-    ssh $i 'pgrep etcd && echo password | sudo -S -p "[sudo] password for cleaning etcd data: " service etcd stop && sudo rm -rf /infra*'
-  } &
+    ssh -t $i 'pgrep etcd && sudo -p "[sudo] password for cleaning etcd data: " service etcd stop && sudo rm -rf /infra*'
+  } 
   done
   wait
 }
