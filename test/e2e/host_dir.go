@@ -18,61 +18,99 @@ package e2e
 
 import (
 	"fmt"
-	"time"
+	"path"
 
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/api"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/api/latest"
 	"github.com/GoogleCloudPlatform/kubernetes/pkg/client"
-	"github.com/GoogleCloudPlatform/kubernetes/pkg/fields"
-	"github.com/GoogleCloudPlatform/kubernetes/pkg/labels"
+	"github.com/GoogleCloudPlatform/kubernetes/pkg/util"
 
 	. "github.com/onsi/ginkgo"
 )
 
-const (
-	timeout       = 1 * time.Minute
-	maxRetries    = 6
-	sleepDuration = 10 * time.Second
-)
-
 var _ = Describe("HostDir", func() {
-	var c *client.Client
+	var (
+		c         *client.Client
+		podClient client.PodInterface
+	)
 
 	BeforeEach(func() {
 		var err error
 		c, err = loadClient()
 		expectNoError(err)
+
+		podClient = c.Pods(api.NamespaceDefault)
 	})
 
-	It("should be healthy on every node.", func() {
-		CheckCadvisorHealthOnAllNodes(c, 5*time.Minute)
+	It("should detect writing operation in the container", func() {
+		volumePath := "/home"
+		//hostfilePath := path.Join(volumePath, "hostdir-test-file") // hostfilePath:/home/vcap/hostdir-test-file
+
+		source := &api.HostPathVolumeSource{
+			Path: "/home", //container
+		}
+		containerfilePath := path.Join(source.Path, "hostdir-test-file") // containerfilePath: /home/hostdir-test-file
+
+		pod := testPodWithHostVolume(volumePath, source)
+		pod.Spec.Containers[0].Args = []string{
+			fmt.Sprintf("--write_new_file=%v", containerfilePath), //container[0]
+		}
+		pod.Spec.Containers[1].Args = []string{
+			fmt.Sprintf("--file_content=%v", containerfilePath), //container[1]
+		}
+		testContainerOutput("hostdir r/w", c, pod, 1, []string{
+			"content of file \"/home/hostdir-test-file\": hostdir-mount-tester new file",
+		})
 	})
+
 })
 
-func CheckCadvisorHealthOnAllNodes(c *client.Client, timeout time.Duration) {
-	By("getting list of nodes")
-	nodeList, err := c.Nodes().List(labels.Everything(), fields.Everything())
-	expectNoError(err)
-	var errors []error
-	retries := maxRetries
-	for {
-		errors = []error{}
-		for _, node := range nodeList.Items {
-			// cadvisor is not accessible directly unless its port (4194 by default) is exposed.
-			// Here, we access '/stats/' REST endpoint on the kubelet which polls cadvisor internally.
-			statsResource := fmt.Sprintf("api/v1beta3/proxy/nodes/%s/stats/", node.Name)
-			By(fmt.Sprintf("Querying stats from node %s using url %s", node.Name, statsResource))
-			_, err = c.Get().AbsPath(statsResource).Timeout(timeout).Do().Raw()
-			if err != nil {
-				errors = append(errors, err)
-			}
-		}
-		if len(errors) == 0 {
-			return
-		}
-		if retries--; retries <= 0 {
-			break
-		}
-		Logf("failed to retrieve kubelet stats -\n %v", errors)
-		time.Sleep(sleepDuration)
+const containerName1 = "test-container-1"
+const containerName2 = "test-container-2"
+const hostdirvolumeName = "test-volume"
+
+func testPodWithHostVolume(path string, source *api.HostPathVolumeSource) *api.Pod {
+	podName := "pod-" + string(util.NewUUID())
+
+	return &api.Pod{
+		TypeMeta: api.TypeMeta{
+			Kind:       "Pod",
+			APIVersion: latest.Version,
+		},
+		ObjectMeta: api.ObjectMeta{
+			Name: podName,
+		},
+		Spec: api.PodSpec{
+			Containers: []api.Container{
+				{
+					Name:  containerName1,
+					Image: "dalanlan/host-dir-mounttest:0.1",
+					VolumeMounts: []api.VolumeMount{
+						{
+							Name:      hostdirvolumeName,
+							MountPath: path,
+						},
+					},
+				},
+				{
+					Name:  containerName2,
+					Image: "dalanlan/host-dir-mounttest:0.1",
+					VolumeMounts: []api.VolumeMount{
+						{
+							Name:      hostdirvolumeName,
+							MountPath: path,
+						},
+					},
+				},
+			},
+			Volumes: []api.Volume{
+				{
+					Name: hostdirvolumeName,
+					VolumeSource: api.VolumeSource{
+						HostPath: source,
+					},
+				},
+			},
+		},
 	}
-	Failf("Failed after retrying %d times for cadvisor to be healthy on all nodes. Errors:\n%v", maxRetries, errors)
 }
