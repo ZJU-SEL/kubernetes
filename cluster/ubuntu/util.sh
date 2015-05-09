@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # A library of helper functions that each provider hosting Kubernetes must implement to use cluster/kube-*.sh scripts.
-set -e
+set -ex
 
 SSH_OPTS="-oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null -oLogLevel=ERROR"
 
@@ -64,7 +64,6 @@ function setClusterInfo() {
   done
 
 }
-
 
 # Verify ssh prereqs
 function verify-prereqs {
@@ -184,7 +183,8 @@ KUBE_APISERVER_OPTS="--address=0.0.0.0 \
 --port=8080 \
 --etcd_servers=http://127.0.0.1:4001 \
 --logtostderr=true \
---portal_net=${1}"
+--portal_net=${1} \
+--token-auth-file=${2}"
 EOF
 }
 
@@ -221,6 +221,7 @@ EOF
 function create-kube-proxy-opts(){
   cat <<EOF > ~/kube/default/kube-proxy
 KUBE_PROXY_OPTS="--master=http://${1}:8080 \
+--kubeconfig=${2} \
 --logtostderr=true"
 EOF
 
@@ -231,6 +232,32 @@ function create-flanneld-opts(){
 FLANNEL_OPTS=""
 EOF
 }
+
+function setup-kube-auth() {
+  echo  "{\"BearerToken\": \"${1}\", \"Insecure\": true }" > ~/kube/kubernetes_auth
+}
+
+function create-kubeconfig() {
+  cat << EOF > ~/kube/kubeconfig 
+apiVersion: v1
+kind: Config
+users:
+- name: kube-proxy
+  user:
+    token: $1
+clusters:
+- name: local
+  cluster:
+    insecure-skip-tls-verify: true
+contexts:
+- context:
+    cluster: local
+    user: kube-proxy
+  name: service-account-context
+current-context: service-account-context
+EOF
+}
+
 
 # Ensure that we have a password created for validating to the master. Will
 # read from $HOME/.kubernetes_auth if available.
@@ -317,15 +344,19 @@ function kube-up {
   setClusterInfo
   ii=0
 
+  prep_known_tokens
+
   for i in ${nodes}
   do
   {
     if [ "${roles[${ii}]}" == "a" ]; then
       provision-master 
     elif [ "${roles[${ii}]}" == "i" ]; then
-      provision-minion $i 
+      get_tokens_from_csv ${i#*@}
+      provision-minion $i $KUBE_BEARER_TOKEN $KUBE_PROXY_TOKEN
     elif [ "${roles[${ii}]}" == "ai" ]; then
-      provision-masterandminion
+      get_tokens_from_csv ${i#*@}
+      provision-masterandminion $KUBE_BEARER_TOKEN $KUBE_PROXY_TOKEN
     else
       echo "unsupported role for ${i}. please check"
       exit 1
@@ -345,13 +376,13 @@ function provision-master() {
   echo "Deploying master on machine ${MASTER_IP}"
   echo 
   ssh $SSH_OPTS $MASTER "mkdir -p ~/kube/default"
-  scp -r $SSH_OPTS ubuntu/config-default.sh ubuntu/util.sh ubuntu/master/* ubuntu/binaries/master/ "${MASTER}:~/kube"
+  scp -r $SSH_OPTS ubuntu/known_tokens.csv ubuntu/config-default.sh ubuntu/util.sh ubuntu/master/* ubuntu/binaries/master/ "${MASTER}:~/kube"
 
   # remote login to MASTER and use sudo to configue k8s master
   ssh $SSH_OPTS -t $MASTER "source ~/kube/util.sh; \
                             setClusterInfo; \
                             create-etcd-opts "${mm[${MASTER_IP}]}" "${MASTER_IP}" "${CLUSTER}"; \
-                            create-kube-apiserver-opts "${PORTAL_NET}"; \
+                            create-kube-apiserver-opts "${PORTAL_NET}" /home/"${MASTER%@*}"/kube/known_tokens.csv; \
                             create-kube-controller-manager-opts "${MINION_IPS}"; \
                             create-kube-scheduler-opts; \
                             sudo -p '[sudo] password to copy files and start master: ' cp ~/kube/default/* /etc/default/ && sudo cp ~/kube/init_conf/* /etc/init/ && sudo cp ~/kube/init_scripts/* /etc/init.d/ \
@@ -370,11 +401,14 @@ function provision-minion() {
     ssh $SSH_OPTS -t $1 "source ~/kube/util.sh; \
                          setClusterInfo; \
                          create-etcd-opts "${mm[${1#*@}]}" "${1#*@}" "${CLUSTER}"; \
+                         create-kubeconfig ${3}; \
                          create-kubelet-opts "${1#*@}" "${MASTER_IP}" "${DNS_SERVER_IP}" "${DNS_DOMAIN}"; 
-                         create-kube-proxy-opts "${MASTER_IP}"; \
+                         create-kube-proxy-opts "${MASTER_IP}" /home/"${1%@*}"/kube/kubeconfig ; \
                          create-flanneld-opts; \
+                         setup-kube-auth ${2}; \
                          sudo -p '[sudo] password to copy files and start minion: ' cp ~/kube/default/* /etc/default/ && sudo cp ~/kube/init_conf/* /etc/init/ && sudo cp ~/kube/init_scripts/* /etc/init.d/ \
-                         && sudo mkdir -p /opt/bin/ && sudo cp ~/kube/minion/* /opt/bin; \
+                         && sudo mkdir -p /opt/bin/ && sudo cp ~/kube/minion/* /opt/bin \
+                         && sudo mkdir -p /var/lib/kubelet && sudo cp ~/kube/kubernetes_auth /var/lib/kubelet; \
                          sudo service etcd start; \
                          sudo -b ~/kube/reconfDocker.sh"
 }
@@ -384,21 +418,24 @@ function provision-masterandminion() {
   echo "Deploying master and minion on machine ${MASTER_IP}"
   echo 
   ssh $SSH_OPTS $MASTER "mkdir -p ~/kube/default"
-  scp -r $SSH_OPTS ubuntu/config-default.sh ubuntu/util.sh ubuntu/master/* ubuntu/reconfDocker.sh ubuntu/minion/* ubuntu/binaries/master/ ubuntu/binaries/minion "${MASTER}:~/kube"
+  scp -r $SSH_OPTS ubuntu/known_tokens.csv ubuntu/config-default.sh ubuntu/util.sh ubuntu/master/* ubuntu/reconfDocker.sh ubuntu/minion/* ubuntu/binaries/master/ ubuntu/binaries/minion "${MASTER}:~/kube"
   
   # remote login to the node and use sudo to configue k8s
   ssh $SSH_OPTS -t $MASTER "source ~/kube/util.sh; \
                             setClusterInfo; \
                             create-etcd-opts "${mm[${MASTER_IP}]}" "${MASTER_IP}" "${CLUSTER}"; \
-                            create-kube-apiserver-opts "${PORTAL_NET}"; \
+                            create-kube-apiserver-opts "${PORTAL_NET}" /home/"${MASTER%@*}"/kube/known_tokens.csv; \
                             create-kube-controller-manager-opts "${MINION_IPS}"; \
                             create-kube-scheduler-opts; \
-                            create-kubelet-opts "${MASTER_IP}" "${MASTER_IP}" "${DNS_SERVER_IP}" "${DNS_DOMAIN}";                     
-                            create-kube-proxy-opts "${MASTER_IP}";\
+                            create-kubelet-opts "${MASTER_IP}" "${MASTER_IP}" "${DNS_SERVER_IP}" "${DNS_DOMAIN}"; \
+                            create-kubeconfig ${2}; \
+                            create-kube-proxy-opts "${MASTER_IP}" /home/"${MASTER%@*}"/kube/kubeconfig;\
                             create-flanneld-opts; \
+                            setup-kube-auth ${1}; \
                             sudo -p '[sudo] password to copy files and start node: ' cp ~/kube/default/* /etc/default/ && sudo cp ~/kube/init_conf/* /etc/init/ && sudo cp ~/kube/init_scripts/* /etc/init.d/ \
-                            && sudo mkdir -p /opt/bin/ && sudo cp ~/kube/master/* /opt/bin/ && sudo cp ~/kube/minion/* /opt/bin/; \
-                            sudo service etcd start; \
+                            && sudo mkdir -p /opt/bin/ && sudo cp ~/kube/master/* /opt/bin/ && sudo cp ~/kube/minion/* /opt/bin/ \
+                            && sudo mkdir -p /var/lib/kubelet && sudo cp ~/kube/kubernetes_auth  /var/lib/kubelet \
+                            && sudo service etcd start; \
                             sudo -b ~/kube/reconfDocker.sh"
 }
 
@@ -424,4 +461,44 @@ function kube-push {
 # Perform preparations required to run e2e tests
 function prepare-e2e() {
   echo "Ubuntu doesn't need special preparations for e2e tests" 1>&2
+}
+
+# Create generic token following GCE standard
+function create_token() {
+  echo $(cat /dev/urandom | base64 | tr -d "=+/" | dd bs=32 count=1 2> /dev/null)
+}
+
+function get_tokens_from_csv() {
+  KUBE_BEARER_TOKEN=$(awk -F, '/kubelet/ {print $1}' ubuntu/${1}_tokens.csv)
+  KUBE_PROXY_TOKEN=$(awk -F, '/kube_proxy/ {print $1}' ubuntu/${1}_tokens.csv)
+}
+
+# Creates a csv file each time called (i.e one per kubelet).
+function generate_kubelet_tokens() {
+  echo "$(create_token),kubelet,kubelet" > ubuntu/${1}_tokens.csv
+  echo "$(create_token),kube_proxy,kube_proxy" >> ubuntu/${1}_tokens.csv
+}
+function generate_service_tokens() {
+  local -r service_accounts=("system:scheduler" "system:controller_manager" "system:logging" "system:monitoring" "system:dns")
+  for account in "${service_accounts[@]}"; do
+    echo "$(create_token),${account},${account}" >> ubuntu/known_tokens.csv
+  done
+}
+
+function prep_known_tokens() {
+  idx=0
+
+  if [ -f "ubuntu/known_tokens.csv" ] ; then
+    rm ubuntu/known_tokens.csv
+  fi
+
+  for i in ${nodes}
+  do
+    if [ "${roles[${idx}]}" == "i" ] || [ "${roles[${idx}]}" == "ai" ]; then
+      generate_kubelet_tokens ${i#*@}
+      cat ubuntu/${i#*@}_tokens.csv >> ubuntu/known_tokens.csv
+    fi
+    ((idx=idx+1))
+  done
+  generate_service_tokens
 }
