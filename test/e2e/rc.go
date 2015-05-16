@@ -43,7 +43,7 @@ var _ = Describe("ReplicationController", func() {
 	})
 
 	It("should serve a basic image on each replica with a public image", func() {
-		ServeImageOrFail(c, "basic", "gcr.io/google_containers/serve_hostname:1.1")
+		ServeImageOrFail(c, "basic", "121.40.171.96:5000/serve_hostname:1.1")
 	})
 
 	It("should serve a basic image on each replica with a private image", func() {
