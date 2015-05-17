@@ -107,7 +107,7 @@ var _ = Describe("Scale", func() {
 					for i := 0; i < itArg.rcsPerThread; i++ {
 						name := "my-short-lived-pod" + string(util.NewUUID())
 						n := itArg.podsPerMinion * minionCount
-						expectNoError(RunRC(c, name, ns, "gcr.io/google_containers/pause:go", n))
+						expectNoError(RunRC(c, name, ns, "reg:5000/pause:go", n))
 						podsLaunched += n
 						Logf("Launched %v pods so far...", podsLaunched)
 						err := DeleteRC(c, ns, name)

@@ -95,7 +95,7 @@ var _ = Describe("Services", func() {
 				Containers: []api.Container{
 					{
 						Name:  "webserver",
-						Image: "121.40.171.96:5000/test-webserver",
+						Image: "reg:5000/test-webserver",
 						VolumeMounts: []api.VolumeMount{
 							{
 								Name:      "results",
@@ -105,7 +105,7 @@ var _ = Describe("Services", func() {
 					},
 					{
 						Name:    "querier",
-						Image:   "121.40.171.96:5000/dnsutils",
+						Image:   "reg:5000/dnsutils",
 						Command: []string{"sh", "-c", probeCmd},
 						VolumeMounts: []api.VolumeMount{
 							{
@@ -318,7 +318,7 @@ var _ = Describe("Services", func() {
 				Containers: []api.Container{
 					{
 						Name:  "webserver",
-						Image: "121.40.171.96:5000/test-webserver",
+						Image: "reg:5000/test-webserver",
 					},
 				},
 			},
@@ -495,7 +495,7 @@ func addEndpointPodOrFail(c *client.Client, ns, name string, labels map[string]s
 			Containers: []api.Container{
 				{
 					Name:  "test",
-					Image: "121.40.171.96:5000/pause",
+					Image: "reg:5000/pause",
 					Ports: []api.ContainerPort{{ContainerPort: 80}},
 				},
 			},

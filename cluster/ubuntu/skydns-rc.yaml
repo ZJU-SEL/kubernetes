@@ -1,11 +1,11 @@
 apiVersion: v1beta3
 kind: ReplicationController
 metadata:
+  name: kube-dns
+  namespace: default
   labels:
     k8s-app: kube-dns
     kubernetes.io/cluster-service: "true"
-  name: kube-dns
-  namespace: default
 spec:
   replicas: 1
   selector:
@@ -15,22 +15,22 @@ spec:
       labels:
         k8s-app: kube-dns
         kubernetes.io/cluster-service: "true"
-        name: kube-dns
     spec:
       containers:
       - name: etcd
         image: gcr.io/google_containers/etcd:2.0.9
         command:
         - /usr/local/bin/etcd
-        - --addr
-        - 127.0.0.1:4001
-        - --bind-addr
-        - 127.0.0.1:4001
-        - -initial-cluster-token=skydns-etcd
+        - -listen-client-urls
+        - http://127.0.0.1:2379,http://127.0.0.1:4001
+        - -advertise-client-urls
+        - http://127.0.0.1:2379,http://127.0.0.1:4001
+        - -initial-cluster-token
+        - skydns-etcd
       - name: kube2sky
         image: gcr.io/google_containers/kube2sky:1.4
         args:
-        # entrypoint = "/kube2sky"
+        # command = "/kube2sky"
         - -domain=cluster.local
         - -kubecfg_file=/etc/dns_token/kubeconfig
         volumeMounts:
@@ -40,7 +40,7 @@ spec:
       - name: skydns
         image: gcr.io/google_containers/skydns:2015-03-11-001
         args:
-        # entrypoint = "/skydns"
+        # command = "/skydns"
         - -machines=http://localhost:4001
         - -addr=0.0.0.0:53
         - -domain=cluster.local.
@@ -48,6 +48,9 @@ spec:
         - containerPort: 53
           name: dns
           protocol: UDP
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
         livenessProbe:
           exec:
             command:

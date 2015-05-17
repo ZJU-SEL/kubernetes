@@ -14,28 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Build a Kubernetes release.  This will build the binaries, create the Docker
-# images and other build artifacts.  All intermediate artifacts will be hosted
-# publicly on Google Cloud Storage currently.
+# Tear down a Kubernetes cluster.
 
 set -o errexit
 set -o nounset
 set -o pipefail
 
 KUBE_ROOT=$(dirname "${BASH_SOURCE}")/..
-source "$KUBE_ROOT/build/common.sh"
+source "${KUBE_ROOT}/cluster/kube-env.sh"
+source "${KUBE_ROOT}/cluster/${KUBERNETES_PROVIDER}/util.sh"
 
-KUBE_RELEASE_RUN_TESTS=${KUBE_RELEASE_RUN_TESTS-y}
+echo "Refreshing cluster using provider: $KUBERNETES_PROVIDER"
 
-kube::build::verify_prereqs
-kube::build::build_image
-kube::build::run_build_command hack/build-cross.sh
+verify-prereqs
+kube-refresh
 
-# if [[ $KUBE_RELEASE_RUN_TESTS =~ ^[yY]$ ]]; then
-#   kube::build::run_build_command hack/test-go.sh
-#   kube::build::run_build_command hack/test-integration.sh
-# fi
-
-kube::build::copy_output  dsf
-# kube::release::package_tarballs
-# kube::release::gcs::release
+echo "Done"

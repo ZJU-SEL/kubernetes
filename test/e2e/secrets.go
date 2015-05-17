@@ -95,7 +95,7 @@ var _ = Describe("Secrets", func() {
 				Containers: []api.Container{
 					{
 						Name:  "secret-test",
-						Image: "kubernetes/mounttest:0.1",
+						Image: "reg:5000/mounttest:0.1",
 						Args: []string{
 							"--file_content=/etc/secret-volume/data-1",
 							"--file_mode=/etc/secret-volume/data-1"},

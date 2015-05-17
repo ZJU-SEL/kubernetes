@@ -139,7 +139,7 @@ var _ = Describe("Density", func() {
 
 			// Start the replication controller.
 			startTime := time.Now()
-			expectNoError(RunRC(c, RCName, ns, "gcr.io/google_containers/pause:go", totalPods))
+			expectNoError(RunRC(c, RCName, ns, "reg:5000/pause:go", totalPods))
 			e2eStartupTime := time.Now().Sub(startTime)
 			Logf("E2E startup time for %d pods: %v", totalPods, e2eStartupTime)
 

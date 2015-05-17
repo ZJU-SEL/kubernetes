@@ -410,10 +410,43 @@ function kube-down {
   for i in ${nodes}; do
   {
     echo "Cleaning on node ${i#*@}"
-    ssh -t $i 'pgrep etcd && sudo -p "[sudo] password for cleaning etcd data: " service etcd stop && sudo rm -rf /infra*'
+    ssh -t $i 'sudo rm -rf /var/lib/kubelet && pgrep etcd && sudo -p "[sudo] password for cleaning etcd data: " service etcd stop && sudo rm -rf /infra*'
   } 
   done
   wait
+}
+
+# refresh a kubernetes cluster
+function kube-refresh {
+  kube-down
+
+  KUBE_ROOT=$(dirname "${BASH_SOURCE}")/../..
+  source "${KUBE_ROOT}/cluster/ubuntu/${KUBE_CONFIG_FILE-"config-default.sh"}"
+
+  setClusterInfo
+  ii=0
+
+  for i in ${nodes}
+  do
+  {
+    if [ "${roles[${ii}]}" == "a" ]; then
+      ssh -t $i 'sudo service etcd start;'
+    elif [ "${roles[${ii}]}" == "i" ]; then
+      ssh -t $i 'sudo service etcd start && sudo -b ~/kube/reconfDocker.sh'
+    elif [ "${roles[${ii}]}" == "ai" ]; then
+      ssh -t $i 'sudo service etcd start && sudo -b ~/kube/reconfDocker.sh'
+    else
+      echo "unsupported role for ${i}. please check"
+      exit 1
+    fi
+  }
+
+    ((ii=ii+1))
+        
+  done
+  wait
+
+  verify-cluster
 }
 
 # Update a kubernetes cluster with latest source

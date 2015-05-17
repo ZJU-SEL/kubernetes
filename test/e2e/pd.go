@@ -254,7 +254,7 @@ func testPDPod(diskName, targetHost string, readOnly bool) *api.Pod {
 			Containers: []api.Container{
 				{
 					Name:  "testpd",
-					Image: "gcr.io/google_containers/pause",
+					Image: "reg:5000/pause",
 					VolumeMounts: []api.VolumeMount{
 						{
 							Name:      "testpd",

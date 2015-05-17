@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	image          = "gcr.io/google_containers/serve_hostname:1.1"
+	image          = "reg:5000/serve_hostname:1.1"
 	simulationTime = 20 * time.Minute
 	smallRCSize    = 5
 	mediumRCSize   = 30

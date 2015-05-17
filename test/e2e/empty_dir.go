@@ -95,7 +95,7 @@ func testPodWithVolume(path string, source *api.EmptyDirVolumeSource) *api.Pod {
 			Containers: []api.Container{
 				{
 					Name:  containerName,
-					Image: "kubernetes/mounttest:0.1",
+					Image: "reg:5000/mounttest:0.1",
 					VolumeMounts: []api.VolumeMount{
 						{
 							Name:      volumeName,

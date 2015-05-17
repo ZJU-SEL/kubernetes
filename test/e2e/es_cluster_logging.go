@@ -198,7 +198,7 @@ func ClusterLevelLoggingWithElasticsearch(c *client.Client) {
 				Containers: []api.Container{
 					{
 						Name:    "synth-logger",
-						Image:   "gcr.io/google_containers/ubuntu:14.04",
+						Image:   "reg:5000/ubuntu:14.04",
 						Command: []string{"bash", "-c", fmt.Sprintf("i=0; while ((i < %d)); do echo \"%d %s $i %s\"; i=$(($i+1)); done", countTo, i, taintName, podName)},
 					},
 				},
