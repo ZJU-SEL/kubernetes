@@ -698,7 +698,7 @@ func TestMakePortsAndBindings(t *testing.T) {
 			HostPort:      445,
 			Protocol:      "foobar",
 		},
-        {
+		{
 			ContainerPort: 443,
 			HostPort:      446,
 			Protocol:      "tcp",
@@ -706,7 +706,7 @@ func TestMakePortsAndBindings(t *testing.T) {
 	}
 	exposedPorts, bindings := makePortsAndBindings(ports)
 	if len(ports) != len(exposedPorts) ||
-		len(ports) != len(bindings) {
+		len(ports) == len(bindings) {
 		t.Errorf("Unexpected ports and bindings, %#v %#v %#v", ports, exposedPorts, bindings)
 	}
 	for key, value := range bindings {
@@ -739,7 +739,7 @@ func TestMakePortsAndBindings(t *testing.T) {
 			if value[0].HostIP != "" {
 				t.Errorf("Unexpected host IP: %s", value[0].HostIP)
 			}
-                case "446":
+		case "446":
 			// allow multiple host ports bind to same container port
 			if !reflect.DeepEqual(docker.Port("443/tcp"), key) {
 				t.Errorf("Unexpected docker port: %#v", key)
