@@ -354,30 +354,22 @@ function kube-up() {
   create-kubeconfig
 }
 
-# TODO all nodes are minions, so provision-master will be simple enough
 function provision-master() {
   # copy the scripts to the ~/kube directory on the master
   echo "Deploying master on machine ${MASTER_IP}"
   echo
   ssh $SSH_OPTS $MASTER "mkdir -p ~/kube/default"
-  scp -r $SSH_OPTS saltbase/salt/generate-cert/make-ca-cert.sh baremetal/config-default.sh baremetal/util.sh baremetal/configNetwork.sh baremetal/master-multi.json "${MASTER}:~/kube"
+  scp -r $SSH_OPTS baremetal/config-default.sh baremetal/util.sh baremetal/configNetwork.sh baremetal/master-multi.json "${MASTER}:~/kube"
 
   # TODO WTF cert stuff
-  # TODO the idea is that we make master configurable, so:
-  # 1. mount a config from host
-  # 2. mount a dir in as work dir for master (a volume),yeah!  
+  # TODO sudo -p missing!
   # remote login to MASTER and use sudo to configue k8s master
   ssh $SSH_OPTS -t $MASTER "start-docker-bootstrap; \
                             source ~/kube/util.sh; \
                             setClusterInfo; \
                             start-etcd; \
-                            start-kubelet-master "${SERVICE_CLUSTER_IP_RANGE}" "${ADMISSION_CONTROL}" "${SERVICE_NODE_PORT_RANGE}"; \
-                            create-flanneld-opts; \
-                            sudo -p '[sudo] password to copy files and start master: ' cp ~/kube/default/* /etc/default/ && sudo cp ~/kube/init_conf/* /etc/init/ && sudo cp ~/kube/init_scripts/* /etc/init.d/ ;\
-                            sudo groupadd -f -r kube-cert; \
-                            sudo ~/kube/make-ca-cert.sh ${MASTER_IP} IP:${MASTER_IP},IP:${SERVICE_CLUSTER_IP_RANGE%.*}.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local; \
-                            sudo mkdir -p /opt/bin/ && sudo cp ~/kube/master/* /opt/bin/; \
-                            sudo service etcd start;"
+                            start-kubelet-master; \
+                            start-network;"
 }
 
 function provision-node() {
@@ -423,7 +415,7 @@ function start-etcd {
 function start-kubelet-master {
   sudo docker run --net=host --privileged --restart=always -d \
     -v /sys:/sys:ro -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/kube/master-multi.json:/etc/kubernetes/manifests-multi/master.json 
+    -v ~/kube/master-multi.json:/etc/kubernetes/manifests-multi/master.json
     gcr.io/google_containers/hyperkube:v${K8S_VERSION} \
     /hyperkube kubelet \
     --api-servers=http://$2:8080 \
