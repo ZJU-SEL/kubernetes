@@ -25,11 +25,14 @@
               "--address=0.0.0.0",
               "--etcd-servers=http://127.0.0.1:4001",
               "--cluster-name=kubernetes",
-              "--v=2",
-              "--client-ca-file=/srv/kubernetes/ca.crt",
-              "--tls-cert-file=/srv/kubernetes/server.cert",
-              "--tls-private-key-file=/srv/kubernetes/server.key"
-        ]
+              "--v=2"
+        ],
+      "volumeMounts": [
+        {
+          "mountPath": "/k8smaster",
+          "name": "master-volume"
+        }
+      ]
     },
     {
       "name": "scheduler",
@@ -41,6 +44,14 @@
               "--v=2"
         ]
     }
-  ]
+  ],
+  "volumes": [
+    {
+      "name": "master-volume",
+      "hostPath": {
+        "path": "/k8smaster"
+       }
+     }
+   ]
  }
 }
