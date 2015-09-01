@@ -16,12 +16,6 @@
 
 ## Contains configuration values for the bare-metal cluster
 
-# (0) Versions
-# Define your versions here
-export FLANNEL_VERSION=${FLANNEL_VERSION:-"0.4.0"}
-export ETCD_VERSION=${ETCD_VERSION:-"2.0.12"}
-export K8S_VERSION=${K8S_VERSION:-"1.0.3"}
-
 # (1) Cluster topology
 # Define all your cluster nodes, MASTER node comes first"
 # And separated with blank space like <user_1@ip_1> <user_2@ip_2> <user_3@ip_3> 
@@ -38,18 +32,20 @@ export roles=($role)
 export NUM_MINIONS=${NUM_MINIONS:-3}
 
 
-# (2) Service
+# (2) Service TODO no use
 # define the IP range used for service cluster IPs.
 # according to rfc 1918 ref: https://tools.ietf.org/html/rfc1918 choose a private ip range here.
-export SERVICE_CLUSTER_IP_RANGE=${SERVICE_CLUSTER_IP_RANGE:-192.168.3.0/24}  # formerly PORTAL_NET
-SERVICE_NODE_PORT_RANGE=${SERVICE_NODE_PORT_RANGE:-"30000-32767"}
+# export SERVICE_CLUSTER_IP_RANGE=${SERVICE_CLUSTER_IP_RANGE:-192.168.3.0/24}  # formerly PORTAL_NET
+# SERVICE_NODE_PORT_RANGE=${SERVICE_NODE_PORT_RANGE:-"30000-32767"}
 
 
 # (3) Define the IP range used for flannel overlay network, should not conflict with above SERVICE_CLUSTER_IP_RANGE
 export FLANNEL_NET=${FLANNEL_NET:-172.16.0.0/16}
 
-# (4) Admission Controllers to invoke prior to persisting objects in cluster
-export ADMISSION_CONTROL=NamespaceLifecycle,NamespaceExists,LimitRanger,ServiceAccount,ResourceQuota,SecurityContextDeny
+
+# (4) TODO no use Admission Controllers to invoke prior to persisting objects in cluster
+# export ADMISSION_CONTROL=NamespaceLifecycle,NamespaceExists,LimitRanger,ServiceAccount,ResourceQuota,SecurityContextDeny
+
 
 # (5) Extra options
 
