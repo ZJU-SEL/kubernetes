@@ -16,20 +16,17 @@
 
 ## Contains configuration values for the bare-metal cluster
 
+# (0) Versions
+# Define your versions here
+export FLANNEL_VERSION=${FLANNEL_VERSION:-"0.4.0"}
+export ETCD_VERSION=${ETCD_VERSION:-"2.0.12"}
+export K8S_VERSION=${K8S_VERSION:-"1.0.5"}
+
 # (1) Cluster topology
 # Define all your cluster nodes, MASTER node comes first"
 # And separated with blank space like <user_1@ip_1> <user_2@ip_2> <user_3@ip_3> 
-export nodes=${nodes:-"vcap@10.10.103.250 vcap@10.10.103.162 vcap@10.10.103.223"}
-export binary="hyperkube"
-
-# Define all your nodes role: a(master) or i(minion) or ai(both master and minion), must be the order same 
-role=${role:-"ai i i"}
-# If it practically impossible to set an array as an environment variable
-# from a script, so assume variable is a string then convert it to an array
-export roles=($role)
-
-# Define minion numbers
-export NUM_MINIONS=${NUM_MINIONS:-3}
+export NODES=${NODES:-"vcap@10.10.102.150 vcap@10.10.103.151"}
+export MASTER=${MASTER:-"vcap@10.10.102.150"}
 
 
 # (2) Service TODO no use
