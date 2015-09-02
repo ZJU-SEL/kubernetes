@@ -116,12 +116,12 @@ function kube-up() {
   source "${KUBE_ROOT}/cluster/ubuntu/${KUBE_CONFIG_FILE-"config-default.sh"}"
 
   # TODO pull hyperkube image, check first?
+  MASTER_IP=${MASTER#*@}
   
   for node in $NODES
   do
     {
       if [ "$node" == $MASTER ]; then
-        MASTER_IP=${MASTER#*@}
         provision-master $MASTER_IP
       else
         provision-node ${node#*@}
@@ -150,9 +150,8 @@ function provision-master() {
   echo "Deploying master on machine $MASTER_IP"
   echo
   ssh $SSH_OPTS $MASTER "mkdir -p ~/kube"
-  scp -r $SSH_OPTS baremetal/config-default.sh baremetal/util.sh baremetal/configNetwork.sh baremetal/master-multi.json "${MASTER}:~/kube"
+  scp -r $SSH_OPTS baremetal/config-default.sh baremetal/util.sh baremetal/configNetwork.sh baremetal/kube-config/ "${MASTER}:~/kube"
 
-  # TODO WTF cert stuff
   # remote login to MASTER and use sudo to configue k8s master
   ssh $SSH_OPTS -t $MASTER "source ~/kube/util.sh; \
                             start-docker-bootstrap $MASTER_IP; \
@@ -166,12 +165,12 @@ function provision-node() {
   # copy the scripts to the ~/kube directory on the node
   echo "Deploying node on machine $1"
   echo
-  ssh $SSH_OPTS $1 "mkdir -p ~/kube"
-  scp -r $SSH_OPTS baremetal/config-default.sh baremetal/util.sh baremetal/configNetwork.sh "${1}:~/kube"
+  ssh $SSH_OPTS $node "mkdir -p ~/kube"
+  scp -r $SSH_OPTS baremetal/config-default.sh baremetal/util.sh baremetal/configNetwork.sh baremetal/kube-config/ "$node:~/kube"
 
   # remote login to node and use sudo to configue k8s node
-  ssh $SSH_OPTS -t $1 "source ~/kube/util.sh; \
-                       start-docker-bootstrap $1; \
+  ssh $SSH_OPTS -t $node "source ~/kube/util.sh; \
+                       start-docker-bootstrap $node; \
                        start-kubelet $DNS_SERVER_IP $DNS_DOMAIN; \
                        start-kubeproxy; \
                        start-network;" 
@@ -200,31 +199,47 @@ function start-etcd {
 # TODO add a option to stop kubelet
 # TODO we need support add more workers
 function start-kubelet-master {
+  # Load kubelet configuration
+  source ~/kube/kube-config/kubelet_config
+  
+  # start kubelet and then load master as a pod
   sudo docker run --net=host --privileged --restart=always -d \
-    -v /sys:/sys:ro -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/kube/master-multi.json:/etc/kubernetes/manifests-multi/master.json
+    --volume=/:/rootfs:ro \
+    --volume=/sys:/sys:ro \
+    --volume=/dev:/dev \
+    --volume=/var/lib/docker/:/var/lib/docker:ro \
+    --volume=/var/lib/kubelet/:/var/lib/kubelet:rw \
+    --volume=/var/run:/var/run:rw \
+    --net=host \
+    --privileged=true \
+    -v ~/kube/kube-config/master-multi.json:/etc/kubernetes/manifests-multi/master.json
     gcr.io/google_containers/hyperkube:v${K8S_VERSION} \
-    /hyperkube kubelet \
+    /hyperkube kubelet --containerized \
     --api-servers=http://localhost:8080 \
-    --v=2 \
-    --address=0.0.0.0 --enable-server \
-    --hostname-override=127.0.0.1 \
     --config=/etc/kubernetes/manifests-multi/master.json \
+    --hostname-override=127.0.0.1 \
     --cluster-dns=$1 \
-    --cluster-domain=$2
+    --cluster-domain=$2 $KUBELET_OPTS
 }
 
 function start-kubelet {
+  # Load kubelet configuration
+  source ~/kube/kube-config/kubelet_config
+  
+  # start kubelet
   sudo docker run --net=host --privileged --restart=always -d \
-    -v /sys:/sys:ro -v /var/run/docker.sock:/var/run/docker.sock \
+    --volume=/:/rootfs:ro \
+    --volume=/sys:/sys:ro \
+    --volume=/dev:/dev \
+    --volume=/var/lib/docker/:/var/lib/docker:ro \
+    --volume=/var/lib/kubelet/:/var/lib/kubelet:rw \
+    --volume=/var/run:/var/run:rw \
     gcr.io/google_containers/hyperkube:v${K8S_VERSION} \
-    /hyperkube kubelet \
+    /hyperkube kubelet --containerized \
     --api-servers=http://$MASTER_IP:8080 \
-    --v=2 \
-    --address=0.0.0.0 --enable-server \
     --hostname-override=$(hostname -i) \
-    --cluster-dns=$3 \
-    --cluster-domain=$4
+    --cluster-dns=$1 \
+    --cluster-domain=$2 $KUBELET_OPTS
 }
 
 function start-kubeproxy {
