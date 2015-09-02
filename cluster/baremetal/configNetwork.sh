@@ -23,8 +23,18 @@ fi
 
 source ~/kube/config-default.sh
 
+# TODO Can we get the ENV properly?
+# Set flannel net config
+docker -H unix:///var/run/docker-bootstrap.sock run \
+    --net=host gcr.io/google_containers/etcd:2.0.12 \
+    etcdctl set /coreos.com/network/config \
+    '{ "Network": "${FLANNEL_NET}", "Backend": {"Type": "vxlan"}}'
+
+
 # iface may change to a private network interface, eth0 is for default
-flannelCID=$(docker -H unix:///var/run/docker-bootstrap.sock run --restart=always -d --net=host --privileged -v /dev/net:/dev/net quay.io/coreos/flannel:0.5.0 /opt/bin/flanneld -iface="eth0")
+flannelCID=$(docker -H unix:///var/run/docker-bootstrap.sock run \
+    --restart=always -d --net=host --privileged \
+    -v /dev/net:/dev/net quay.io/coreos/flannel:0.5.0 /opt/bin/flanneld -iface="eth0")
 
 sleep 8
 
@@ -46,7 +56,7 @@ esac
 echo "DOCKER_OPTS=\"\$DOCKER_OPTS --mtu=${FLANNEL_MTU} --bip=${FLANNEL_SUBNET}\"" | sudo tee -a ${DOCKER_CONF}
 
 
-# sleep a little bit
+# TODO sleep a little bit
 ifconfig docker0 down
 
 case "$lsb_dist" in
