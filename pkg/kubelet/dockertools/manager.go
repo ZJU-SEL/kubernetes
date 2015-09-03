@@ -25,7 +25,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -572,6 +571,7 @@ func makePortsAndBindings(portMappings []kubecontainer.PortMapping) (map[docker.
 			glog.Warningf("Unknown protocol %q: defaulting to TCP", port.Protocol)
 			protocol = "/tcp"
 		}
+
 		dockerPort := docker.Port(strconv.Itoa(interiorPort) + protocol)
 		exposedPorts[dockerPort] = struct{}{}
 
@@ -582,10 +582,8 @@ func makePortsAndBindings(portMappings []kubecontainer.PortMapping) (map[docker.
 
 		// Allow multiple host ports bind to same docker port
 		if existedBindings, ok := portBindings[dockerPort]; ok {
-			if !portAlreadyBind(hostBinding, portBindings[dockerPort]) {
-				// If a docker port already map to a host port, just append the host ports
-				portBindings[dockerPort] = append(existedBindings, hostBinding)
-			}
+			// If a docker port already map to a host port, just append the host ports
+			portBindings[dockerPort] = append(existedBindings, hostBinding)
 		} else {
 			// Otherwise, it's fresh new port binding
 			portBindings[dockerPort] = []docker.PortBinding{
@@ -594,17 +592,6 @@ func makePortsAndBindings(portMappings []kubecontainer.PortMapping) (map[docker.
 		}
 	}
 	return exposedPorts, portBindings
-}
-
-// Check if a hostBinding already bind to a docker port
-// Return true if hostBinding exists in portBindings[dockerPort]
-func portAlreadyBind(hostBinding docker.PortBinding, portBindings []docker.PortBinding) bool {
-	for _, portBinding := range portBindings {
-		if reflect.DeepEqual(portBinding, hostBinding) {
-			return true
-		}
-	}
-	return false
 }
 
 func (dm *DockerManager) runContainer(

@@ -22,6 +22,7 @@ import (
 	"hash/adler32"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -698,98 +699,95 @@ func TestMakePortsAndBindings(t *testing.T) {
 			HostPort:      445,
 			Protocol:      "foobar",
 		},
+		{
+			ContainerPort: 443,
+			HostPort:      446,
+			Protocol:      "tcp",
+		},
+		{
+			ContainerPort: 443,
+			HostPort:      446,
+			Protocol:      "udp",
+		},
 	}
+
 	exposedPorts, bindings := makePortsAndBindings(ports)
-	if len(ports) != len(exposedPorts) {
+
+	// Count the expected exposed ports
+	expectedExposedPorts := map[string]struct{}{}
+	for _, binding := range ports {
+		dockerKey := strconv.Itoa(binding.ContainerPort) + "/" + string(binding.Protocol)
+		expectedExposedPorts[dockerKey] = struct{}{}
+	}
+
+	if len(expectedExposedPorts) != len(exposedPorts) {
 		t.Errorf("Unexpected ports and bindings, %#v %#v %#v", ports, exposedPorts, bindings)
 	}
-	for key, value := range bindings {
-		switch value[0].HostPort {
-		case "8080":
-			if !reflect.DeepEqual(docker.Port("80/tcp"), key) {
-				t.Errorf("Unexpected docker port: %#v", key)
-			}
-			if value[0].HostIP != "127.0.0.1" {
-				t.Errorf("Unexpected host IP: %s", value[0].HostIP)
-			}
-		case "443":
-			if !reflect.DeepEqual(docker.Port("443/tcp"), key) {
-				t.Errorf("Unexpected docker port: %#v", key)
-			}
-			if value[0].HostIP != "" {
-				t.Errorf("Unexpected host IP: %s", value[0].HostIP)
-			}
-		case "444":
-			if !reflect.DeepEqual(docker.Port("444/udp"), key) {
-				t.Errorf("Unexpected docker port: %#v", key)
-			}
-			if value[0].HostIP != "" {
-				t.Errorf("Unexpected host IP: %s", value[0].HostIP)
-			}
-		case "445":
-			if !reflect.DeepEqual(docker.Port("445/tcp"), key) {
-				t.Errorf("Unexpected docker port: %#v", key)
-			}
-			if value[0].HostIP != "" {
-				t.Errorf("Unexpected host IP: %s", value[0].HostIP)
-			}
-		}
-	}
 
-func TestMakePortsAndBindingsWithMultiHostPorts(t *testing.T) {
-	expectBindings = 3
-	dockerPort = 443
-	dockerPortStr = strconv.Itoa(dockerPort)
-
-	ports := []kubecontainer.PortMapping{
-		{
-			ContainerPort: dockerPort,
-			HostPort:      443,
-			Protocol:      "tcp",
-		},
-		{
-			ContainerPort: dockerPort,
-			HostPort:      444,
-			Protocol:      "tcp",
-		},
-		{
-			ContainerPort: dockerPort,
-			HostPort:      444,
-			Protocol:      "tcp",
-		},
-		{
-			ContainerPort: dockerPort,
-			HostPort:      444,
-			Protocol:      "tcp",
-			HostIP:        "1.2.3.4",
-		},
-	}
-	_, bindings := makePortsAndBindings(ports)
-
-	hostBindings := bindings[dockerPortStr]
-	
-
-	if len(hostBindings) > expectBindings) {
-	   t.Errorf("Redundant bindings detected, %#v %#v", ports, bindings)
-	}
-
-	if len(hostBindings) < expectBindings) {
-	   t.Errorf("We should allow mapping to muliple host ports, %#v %#v", ports, bindings)
-	}
-	
-	var flag map[string]string
-
-	for hostBinding := range hostBindings {
-        switch hostPort := hostBinding.hostPort {
-		case "443", "444", "445":
-			hostKey := hostPort + hostBinding.hostIP
-			if flag[hostKey] != "" {
-				t.Errorf("Host %#v has already bind to docker port '443'", hostBinding )
-			} else {
-				flag[hostKey] = hostKey
+	// interate the bindings by dockerPort, and check its portBindings
+	for dockerPort, portBindings := range bindings {
+		switch dockerPort {
+		case "80/tcp":
+			for _, portBinding := range portBindings {
+				switch portBinding.HostPort {
+				case "8080":
+					if portBinding.HostIP != "127.0.0.1" {
+						t.Errorf("Unexpected host IP: %s", portBinding.HostIP)
+					}
+				default:
+					t.Errorf("Unexpected host port: %#v", portBinding.HostPort)
+				}
+			}
+		case "443/tcp":
+			for _, portBinding := range portBindings {
+				switch portBinding.HostPort {
+				case "443":
+					if portBinding.HostIP != "" {
+						t.Errorf("Unexpected host IP: %s", portBinding.HostIP)
+					}
+				case "446":
+					if portBinding.HostIP != "" {
+						t.Errorf("Unexpected host IP: %s", portBinding.HostIP)
+					}
+				default:
+					t.Errorf("Unexpected host port: %#v", portBinding.HostPort)
+				}
+			}
+		case "443/udp":
+			for _, portBinding := range portBindings {
+				switch portBinding.HostPort {
+				case "446":
+					if portBinding.HostIP != "" {
+						t.Errorf("Unexpected host IP: %s", portBinding.HostIP)
+					}
+				default:
+					t.Errorf("Unexpected host port: %#v", portBinding.HostPort)
+				}
+			}
+		case "444/udp":
+			for _, portBinding := range portBindings {
+				switch portBinding.HostPort {
+				case "444":
+					if portBinding.HostIP != "" {
+						t.Errorf("Unexpected host IP: %s", portBinding.HostIP)
+					}
+				default:
+					t.Errorf("Unexpected host port: %#v", portBinding.HostPort)
+				}
+			}
+		case "445/tcp":
+			for _, portBinding := range portBindings {
+				switch portBinding.HostPort {
+				case "445":
+					if portBinding.HostIP != "" {
+						t.Errorf("Unexpected host IP: %s", portBinding.HostIP)
+					}
+				default:
+					t.Errorf("Unexpected host port: %#v", portBinding.HostPort)
+				}
 			}
 		default:
-			t.Errorf("Unexpected host port: %s", hostPort)
+			t.Errorf("Unexpected docker port: %s", dockerPort)
 		}
 	}
 }
