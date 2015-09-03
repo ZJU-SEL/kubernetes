@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -597,7 +598,7 @@ func makePortsAndBindings(portMappings []kubecontainer.PortMapping) (map[docker.
 
 // Check if a hostBinding already bind to a docker port
 // Return true if hostBinding exists in portBindings[dockerPort]
-func portAlreadyBind(hostBinding PortBinding, portBindings []PortBinding) bool {
+func portAlreadyBind(hostBinding docker.PortBinding, portBindings []docker.PortBinding) bool {
 	for _, portBinding := range portBindings {
 		if reflect.DeepEqual(portBinding, hostBinding) {
 			return true
