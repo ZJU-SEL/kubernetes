@@ -579,10 +579,12 @@ func makePortsAndBindings(portMappings []kubecontainer.PortMapping) (map[docker.
 			HostIP:   port.HostIP,
 		}
 
-		// Allow multiple host ports bind to same container port
-		if existedBindings := portBindings[dockerPort]; len(existedBindings) != 0 {
-			// If a container port already map to a host port, just append the host ports
-			portBindings[dockerPort] = append(existedBindings, hostBinding)
+		// Allow multiple host ports bind to same docker port
+		if existedBindings, ok := portBindings[dockerPort]; ok {
+			if !portAlreadyBind(hostBinding, portBindings[dockerPort]) {
+				// If a docker port already map to a host port, just append the host ports
+				portBindings[dockerPort] = append(existedBindings, hostBinding)
+			}
 		} else {
 			// Otherwise, it's fresh new port binding
 			portBindings[dockerPort] = []docker.PortBinding{
@@ -591,6 +593,17 @@ func makePortsAndBindings(portMappings []kubecontainer.PortMapping) (map[docker.
 		}
 	}
 	return exposedPorts, portBindings
+}
+
+// Check if a hostBinding already bind to a docker port
+// Return true if hostBinding exists in portBindings[dockerPort]
+func portAlreadyBind(hostBinding PortBinding, portBindings []PortBinding) bool {
+	for _, portBinding := range portBindings {
+		if reflect.DeepEqual(portBinding, hostBinding) {
+			return true
+		}
+	}
+	return false
 }
 
 func (dm *DockerManager) runContainer(

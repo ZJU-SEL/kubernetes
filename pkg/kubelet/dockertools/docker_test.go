@@ -698,15 +698,9 @@ func TestMakePortsAndBindings(t *testing.T) {
 			HostPort:      445,
 			Protocol:      "foobar",
 		},
-		{
-			ContainerPort: 443,
-			HostPort:      446,
-			Protocol:      "tcp",
-		},
 	}
 	exposedPorts, bindings := makePortsAndBindings(ports)
-	if len(ports) != len(exposedPorts) ||
-		len(ports) == len(bindings) {
+	if len(ports) != len(exposedPorts) {
 		t.Errorf("Unexpected ports and bindings, %#v %#v %#v", ports, exposedPorts, bindings)
 	}
 	for key, value := range bindings {
@@ -739,14 +733,63 @@ func TestMakePortsAndBindings(t *testing.T) {
 			if value[0].HostIP != "" {
 				t.Errorf("Unexpected host IP: %s", value[0].HostIP)
 			}
-		case "446":
-			// allow multiple host ports bind to same container port
-			if !reflect.DeepEqual(docker.Port("443/tcp"), key) {
-				t.Errorf("Unexpected docker port: %#v", key)
+		}
+	}
+
+func TestMakePortsAndBindingsWithMultiHostPorts(t *testing.T) {
+	expectBindings = 3
+	dockerPort = 443
+	dockerPortStr = strconv.Itoa(dockerPort)
+
+	ports := []kubecontainer.PortMapping{
+		{
+			ContainerPort: dockerPort,
+			HostPort:      443,
+			Protocol:      "tcp",
+		},
+		{
+			ContainerPort: dockerPort,
+			HostPort:      444,
+			Protocol:      "tcp",
+		},
+		{
+			ContainerPort: dockerPort,
+			HostPort:      444,
+			Protocol:      "tcp",
+		},
+		{
+			ContainerPort: dockerPort,
+			HostPort:      444,
+			Protocol:      "tcp",
+			HostIP:        "1.2.3.4",
+		},
+	}
+	_, bindings := makePortsAndBindings(ports)
+
+	hostBindings := bindings[dockerPortStr]
+	
+
+	if len(hostBindings) > expectBindings) {
+	   t.Errorf("Redundant bindings detected, %#v %#v", ports, bindings)
+	}
+
+	if len(hostBindings) < expectBindings) {
+	   t.Errorf("We should allow mapping to muliple host ports, %#v %#v", ports, bindings)
+	}
+	
+	var flag map[string]string
+
+	for hostBinding := range hostBindings {
+        switch hostPort := hostBinding.hostPort {
+		case "443", "444", "445":
+			hostKey := hostPort + hostBinding.hostIP
+			if flag[hostKey] != "" {
+				t.Errorf("Host %#v has already bind to docker port '443'", hostBinding )
+			} else {
+				flag[hostKey] = hostKey
 			}
-			if value[0].HostIP != "" {
-				t.Errorf("Unexpected host IP: %s", value[0].HostIP)
-			}
+		default:
+			t.Errorf("Unexpected host port: %s", hostPort)
 		}
 	}
 }
