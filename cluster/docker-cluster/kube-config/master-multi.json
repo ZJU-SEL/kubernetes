@@ -26,13 +26,7 @@
               "--etcd-servers=http://127.0.0.1:4001",
               "--cluster-name=kubernetes",
               "--v=2"
-        ],
-      "volumeMounts": [
-        {
-          "mountPath": "/k8smaster",
-          "name": "master-volume"
-        }
-      ]
+        ]
     },
     {
       "name": "scheduler",
@@ -44,14 +38,6 @@
               "--v=2"
         ]
     }
-  ],
-  "volumes": [
-    {
-      "name": "master-volume",
-      "hostPath": {
-        "path": "/k8smaster"
-       }
-     }
-   ]
+  ]
  }
 }
