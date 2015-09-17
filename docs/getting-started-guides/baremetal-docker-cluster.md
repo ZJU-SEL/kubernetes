@@ -38,6 +38,7 @@ Kubernetes Deployment On Bare-metal Docker Cluster
 - [Starting a Cluster](#starting-a-cluster)
     - [Add another Node into cluster](#add-another-node-into-cluster)
 - [Test it out](#test-it-out)
+- [Tear Down](#tear-down)
 - [Trouble shooting](#trouble-shooting)
 
 ## Introduction
@@ -54,7 +55,8 @@ Cloud team from [Zhejiang University](https://github.com/ZJU-SEL) will maintain 
 1. The nodes have installed docker version 1.2+.
 2. All machines can communicate with each other, no need to connect Internet (but should configure to use
 private docker registry in this case).
-3. All the remote servers is ssh accessible.
+3. All the remote servers are ssh accessible.
+4. If your machines were onced provisoned before, [Tear Down](#tear-down) first is highly recommended.
 
 
 ## Starting a Cluster
@@ -145,6 +147,15 @@ You can even change the configuration of Master after the deployment has done wi
 ### kubelet
 
 Except a few basic options defined in `provision/master.sh|node.sh`, you can customize the `docker-cluster/kube-config/kubelet.env` freely to add or update `kubelet` options **before deploying**.
+
+## Tear Down
+
+In `cluster/` directory:
+
+```sh
+export NODES="vcap@10.10.102.150 vcap@10.10.102.152"
+export KUBERNETES_PROVIDER=docker-cluster ./kube-down.sh
+```
 
 ## Trouble shooting
 

@@ -76,3 +76,5 @@ function clear_all() {
   clear_old_bootstrap
   clear_old_components
 }
+
+$@

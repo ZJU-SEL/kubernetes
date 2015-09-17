@@ -186,7 +186,7 @@ function kube-down {
   for i in ${NODES}; do
   {
     echo "... Cleaning on node ${i#*@}"
-    ssh -t $i "sudo source ~/docker-cluster/provision/destroy.sh && clear_all \
+    ssh -t $i "sudo bash ~/docker-cluster/provision/destroy.sh clear_all \
     && rm -rf ~/docker-cluster/"
   }
   done
