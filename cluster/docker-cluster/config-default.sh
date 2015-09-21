@@ -33,8 +33,10 @@ export NODES=${NODES:-}
 export MASTER=${MASTER:-}
 # Modify this value may fail validate-cluster if MASTER_IP is not public accessible
 export MASTER_IP=${MASTER#*@}
-# Set if you only want to add node to a existing cluster, then we'll not provision master
-export NODE_ONLY=${NODE_ONLY:-}
+# Set to 'yes' if you only want to add node to a existing cluster, then we'll not provision master
+export NODE_ONLY=${NODE_ONLY:-"no"}
+# Set to 'yes' if you want to customize your k8s master
+export MASTER_CONF=${MASTER_CONF:-"no"}
 
 # (2) SSH OPTS
 # define the SSH OPTS.

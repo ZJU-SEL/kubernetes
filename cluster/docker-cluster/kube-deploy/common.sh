@@ -17,7 +17,7 @@
 # A common lib for master.sh & node.sh to use
 source ~/docker-cluster/kube-config/node.env
 source ~/docker-cluster/kube-config/kubelet.env
-source ~/docker-cluster/provision/destroy.sh
+source ~/docker-cluster/kube-deploy/destroy.sh
 
 : ${K8S_VERSION?"K8S_VERSION is not exported on Node"}
 
@@ -37,8 +37,6 @@ fi
 function command_exists() {
     command -v "$@" > /dev/null 2>&1
 }
-
-lsb_dist=""
 
 # Detect the OS distro, we support ubuntu, debian, mint, centos, fedora dist
 function detect_lsb() {
@@ -89,8 +87,9 @@ function bootstrap_daemon() {
     fi
 }
 
-# kubelet & kubeproxy use host network, so we can deal with contaienr network seperately
+# kubelet & kubeproxy use host network, so we can deal with container network seperately
 function start-network() {
-  echo "... Configure networking"
-  ~/docker-cluster/configNetwork.sh $1
+  echo "... Configuring network"
+  # $1 is used for config-network to know if it will deploy a master
+  ~/docker-cluster/config-network.sh $1
 }

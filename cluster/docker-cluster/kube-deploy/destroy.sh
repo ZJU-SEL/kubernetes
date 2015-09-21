@@ -14,9 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Used to clean nodes
+# This script contains useful functions which will be called during deployment
+# to clear bootstrap daemon and existing hyperkube containers.
+# And it is also used to tear down the whole deployment when calling kube-down. 
 
-# Clear old bootstrap daemon, and clean bootstrap containers first
+# Clean bootstrap containers, and then destory the bootstrap daemon
 function clear_old_bootstrap {
     echo "... Bootstrap daemon already started, destroying"
     PID=`ps -eaf | grep 'unix:///var/run/docker-bootstrap.sock' | grep -v grep | awk '{print $2}'`
@@ -26,8 +28,8 @@ function clear_old_bootstrap {
         kill -9 $PID
         echo "... Clearing bootstrap dir"
         rm -rf /var/lib/docker-bootstrap || true
-        # Have to warn user some dirs left ...
-        echo "Warning: Some directories can not be deleted, clear them mannually later"
+        # Have to warn user some dirs left
+        echo "Warning: Some directories can not be deleted, you need to clear them mannually"
     fi
 }
 
@@ -35,26 +37,23 @@ function clear_bootstrap_containers {
   # Clean the bootstrap containers
   containers=`docker -H unix:///var/run/docker-bootstrap.sock ps -aq`
   if [[ "" !=  "$containers" ]]; then
-      # Stop first
-      docker -H unix:///var/run/docker-bootstrap.sock stop $containers
-      # Somtimes cleaning fs fails, leaving those garbage for now
+      # Sometimes cleaning fs fails, leaving those garbage for now
       docker -H unix:///var/run/docker-bootstrap.sock rm -vf $containers || true
   else
       echo "Nothing on bootstrap to clear"
   fi
 }
 
-# Clear the old kubelet, kube-proxy, and related 
+# Clear the old kubelet, kube-proxy 
 function clear_old_components() {
   echo "... Clearing old components on the Node"
 
   # Stop & rm
   containers=`docker ps -a | grep -E "kube_in_docker|k8s-master" | awk '{print $1}'`
   if [[ "" !=  "$containers" ]]; then
-      docker stop $containers 
-      docker rm -vf $containers
+      docker rm -vf $containers || true
   else
-      echo "Nothing kube-in-docker to clear"
+      echo "Nothing to clear"
   fi
 
   # Just stop, in case users have their own hyperkube containers
@@ -62,11 +61,9 @@ function clear_old_components() {
   if [[ "" !=  "$suspicious" ]]; then
       docker stop $suspicious
       echo "... ... And stopped some users' redundant kubelet"
-      sleep 3
       stubborn=`docker ps | grep -E "/hyperkube kubelet|/hyperkube proxy" | awk '{print $1}'`
       if [[ "" !=  "$stubborn" ]]; then
-          echo "... ... Found some stubborn kubelet, removed by force"
-          docker rm -vf $stubborn
+          echo "... ... Warning: Found some extra kubelet|proxy running, they may fail the deployment"
       fi
   fi
 }
@@ -77,4 +74,6 @@ function clear_all() {
   clear_old_components
 }
 
+# Make all the functions in this scripts can be run as parameter
+# This is useful in kube-down.sh 
 $@

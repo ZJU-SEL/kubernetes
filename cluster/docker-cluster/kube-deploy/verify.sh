@@ -15,6 +15,7 @@
 # limitations under the License.
 
 # Verify if k8s cluster works
+# TODO not like other providers, we did not verfiy kubectl binary here
 function verify() {
   	local -a required_daemon
 
