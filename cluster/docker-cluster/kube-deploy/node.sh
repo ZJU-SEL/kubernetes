@@ -15,11 +15,10 @@
 # limitations under the License.
 
 # A scripts to install k8s worker node.
-# Author @wizard_cxy @reouser
 
 set -e
 
-source ~/docker-cluster/provision/common.sh
+source ~/docker-cluster/kube-deploy/common.sh
 
 # Start k8s components in containers
 start_k8s() {
@@ -30,22 +29,22 @@ start_k8s() {
 
     # start kubelet
     docker run --net=host --privileged --restart=always -d \
-    -v /:/rootfs:ro \
-    -v /sys:/sys:ro \
-    -v /dev:/dev \
-    -v /var/lib/docker/:/var/lib/docker:ro \
-    -v /var/lib/kubelet/:/var/lib/kubelet:rw \
-    -v /var/run:/var/run:rw \
-    --name=kube_in_docker_kubelet_$RANDOM \
-    gcr.io/google_containers/hyperkube:v$K8S_VERSION \
-    /hyperkube kubelet --containerized \
-    --api-servers=http://$MASTER_IP:8080 \
-    $KUBELET_OPTS
+        -v /:/rootfs:ro \
+        -v /sys:/sys:ro \
+        -v /dev:/dev \
+        -v /var/lib/docker/:/var/lib/docker:ro \
+        -v /var/lib/kubelet/:/var/lib/kubelet:rw \
+        -v /var/run:/var/run:rw \
+        --name=kube_in_docker_kubelet_$RANDOM \
+        gcr.io/google_containers/hyperkube:v$K8S_VERSION \
+        /hyperkube kubelet --containerized \
+        --api-servers=http://$MASTER_IP:8080 \
+        $KUBELET_OPTS
 
     docker run -d --net=host --restart=always --privileged \
-    --name kube_in_docker_proxy_$RANDOM \
-    gcr.io/google_containers/hyperkube:v$K8S_VERSION \
-    /hyperkube proxy --master=http://$MASTER_IP:8080 --v=2
+        --name kube_in_docker_proxy_$RANDOM \
+        gcr.io/google_containers/hyperkube:v$K8S_VERSION \
+        /hyperkube proxy --master=http://$MASTER_IP:8080 --v=2
 }
 echo "... Detecting your OS distro"
 detect_lsb

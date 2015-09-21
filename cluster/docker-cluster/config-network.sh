@@ -14,19 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# reconfigure docker network setting
+# This script is used to configure & start flanneld container on bootstrap daemon
+# and then configure & restart docker daemon to make network parameters work.
+
+# Users are allowed to re-wirte this script to deploy their own network solution
+# instead of flannel. 
+
 set -e
 
 source ~/docker-cluster/kube-config/node.env
 
-# TODO exit 1 will break ssh, maybe just exit?
 if [ "$(id -u)" != "0" ]; then
-  echo >&2 "configNetwork must be called as root!"
+  echo >&2 "config-network.sh must be called as root!"
   exit 1
 fi
 
+# Only need to do this on master, so we use MASTER_IP in $1 as a flag
 if [[ ! -z $1 ]]; then
-  # On master, we set flannel net config
   docker -H unix:///var/run/docker-bootstrap.sock run \
     --net=host gcr.io/google_containers/etcd:$ETCD_VERSION \
     etcdctl set /coreos.com/network/config \
@@ -34,15 +38,13 @@ if [[ ! -z $1 ]]; then
 
 fi
 
+sleep 2
 
-# TODO iface may change to a private network interface, eth0 is for default
+# We use eth0 for default, may make it configurable in future
 flannelCID=$(docker -H unix:///var/run/docker-bootstrap.sock run \
     --restart=always -d --net=host --privileged \
     -v /dev/net:/dev/net quay.io/coreos/flannel:$FLANNEL_VERSION \
     /opt/bin/flanneld --etcd-endpoints=http://${MASTER_IP}:4001 -iface="eth0")
-
-# sleep to wait network
-sleep 5
 
 # Copy flannel env out and source it on the host
 docker -H unix:///var/run/docker-bootstrap.sock cp ${flannelCID}:/run/flannel/subnet.env .
@@ -52,7 +54,7 @@ source subnet.env
 DOCKER_CONF=""
 
 # Configure docker net settings, then restart it
-# $lsb_dist is deceted in provision/common.sh
+# $lsb_dist is detected in kube-deploy/common.sh
 case "$lsb_dist" in
     fedora|centos|amzn)
         DOCKER_CONF="/etc/sysconfig/docker"
@@ -76,18 +78,13 @@ case "$lsb_dist" in
     ;;
 esac
 
-# sleep to wait docker daemon
-sleep 2
-
-
-##### Verify 
-function verify() {
-  local -a required_daemon=("/opt/bin/flanneld")
-  local daemon
-  for daemon in "${required_daemon[@]}"; do
-    ssh $SSH_OPTS $2 "pgrep -f \"${daemon}\"" >/dev/null 2>&1 || {
-      printf "Warning: $daemon is not running! \n"        
-    }
-  done
+# Verify network 
+function verify-network() {
+  pgrep -f "/opt/bin/flanneld" >/dev/null 2>&1 || {
+    printf "Warning: $daemon is not running! \n"        
+  }
   printf "\n"
 }
+
+# We need to verfiy it here as user is allow to use their own network solution instead of flannel
+verify-network

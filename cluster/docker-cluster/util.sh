@@ -18,7 +18,7 @@
 set -e
 
 
-# Verify requests
+# Verify SSH is available and ENVs are set
 # 
 # Assumed vars:
 #   MASTER
@@ -65,9 +65,9 @@ function validate-cluster {
   do
     {
       if [ "$node" == $MASTER ]; then
-        ssh $SSH_OPTS $node "bash ~/docker-cluster/provision/verify.sh master"
+        ssh $SSH_OPTS $node "bash ~/docker-cluster/kube-deploy/verify.sh master"
       else
-        ssh $SSH_OPTS $node "bash ~/docker-cluster/provision/verify.sh node"
+        ssh $SSH_OPTS $node "bash ~/docker-cluster/kube-deploy/verify.sh node"
       fi
     }
   done
@@ -98,11 +98,11 @@ function kube-up() {
   do
     {
       if [ "$node" == $MASTER ]; then
-        if [[ -z $NODE_ONLY ]]; then
-          provision-node-master $MASTER_IP
+        if [[ "yes" != $NODE_ONLY ]]; then
+          deploy-node-master $MASTER_IP
         fi
       else
-        provision-node ${node#*@}
+        deploy-node ${node#*@}
       fi
       NUM_MINIONS=$((NUM_MINIONS+1))
     }
@@ -128,6 +128,7 @@ export K8S_VERSION=$K8S_VERSION
 export NODES="$NODES"
 export MASTER=$MASTER
 export MASTER_IP=$MASTER_IP
+export MASTER_CONF=$MASTER_CONF
 export SSH_OPTS="$SSH_OPTS"
 export FLANNEL_NET=$FLANNEL_NET
 EOF
@@ -149,14 +150,14 @@ EOF
 #   MASTER_IP
 #   MASTER
 #   SSH_OPTS
-function provision-node-master() {
+function deploy-node-master() {
   # copy the scripts to the ~/docker-cluster directory on the master
   echo "... Deploying Master on machine $MASTER_IP"
   echo
   scp -r $SSH_OPTS docker-cluster "${MASTER}:~"
 
   # remote login to MASTER and use sudo to configue k8s master
-  ssh $SSH_OPTS -t $MASTER "sudo bash ~/docker-cluster/provision/master.sh;"
+  ssh $SSH_OPTS -t $MASTER "sudo bash ~/docker-cluster/kube-deploy/master.sh;"
 }
 
 # Provison node
@@ -165,14 +166,14 @@ function provision-node-master() {
 #   MASTER_IP
 #   MASTER
 #   SSH_OPTS
-function provision-node() {
+function deploy-node() {
   # copy the scripts to the ~/docker-cluster directory on the node
   echo "... Deploying Node on machine $1"
   echo
   scp -r $SSH_OPTS docker-cluster "$node:~"
 
   # remote login to node and use sudo to configue k8s node
-  ssh $SSH_OPTS -t $node "sudo bash ~/docker-cluster/provision/node.sh;" 
+  ssh $SSH_OPTS -t $node "sudo bash ~/docker-cluster/kube-deploy/node.sh;" 
 }
 
 # Delete a kubernetes cluster
@@ -186,7 +187,7 @@ function kube-down {
   for i in ${NODES}; do
   {
     echo "... Cleaning on node ${i#*@}"
-    ssh -t $i "sudo bash ~/docker-cluster/provision/destroy.sh clear_all \
+    ssh -t $i "sudo bash ~/docker-cluster/kube-deploy/destroy.sh clear_all \
     && rm -rf ~/docker-cluster/"
   }
   done
@@ -209,7 +210,7 @@ function trap-add {
 
 # Update a kubernetes cluster with latest source
 function kube-push {
-  echo "Not implemented"
+  echo "TODO Not implemented"
 }
 
 # Perform preparations required to run e2e tests
