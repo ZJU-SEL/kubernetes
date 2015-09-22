@@ -33,6 +33,8 @@ Documentation for other releases can be found at
 Running Multi-Node Kubernetes Using Docker
 ------------------------------------------
 
+This guide describes how to deploy Kubernetes automatically by using a Docker cluster, regardless of providers (bare metal, GCE, AWS and all OS distributions) differences. You can scale to **any number of nodes** by following the guide.
+
 _Note_:
 These instructions are somewhat significantly more advanced than the [single node](docker.md) instructions.  If you are
 interested in just starting to explore Kubernetes, we recommend that you start there.
@@ -46,20 +48,25 @@ Please install Docker 1.6.2 or Docker 1.7.1.
 - [Prerequisites](#prerequisites)
 - [Overview](#overview)
   - [Bootstrap Docker](#bootstrap-docker)
-- [Master Node](#master-node)
-- [Adding a worker node](#adding-a-worker-node)
-- [Deploy a DNS](#deploy-a-dns)
-- [Testing your cluster](#testing-your-cluster)
+- [Starting a Cluster](#starting-a-cluster)
+    - [Add another Node into cluster](#add-another-node-into-cluster)
+- [Test it out](#test-it-out)
+- [Customize](#customize)
+- [Tear Down](#tear-down)
+- [Trouble shooting](#trouble-shooting)
 
 ## Prerequisites
 
-1. You need a machine with docker of right version installed.
+1. The nodes have installed Docker with right version.
+2. All machines can communicate with each other, no need to connect Internet (but should configure to use
+private docker registry in this case).
+3. All the remote servers are ssh accessible.
+4. If your machines were onced provisoned before, [Tear Down](#tear-down) first is highly recommended.
 
 ## Overview
 
-This guide will set up a 2-node Kubernetes cluster, consisting of a _master_ node which hosts the API server and orchestrates work
-and a _worker_ node which receives work from the master.  You can repeat the process of adding worker nodes an arbitrary number of
-times to create larger clusters.
+This guide will set up a multi-node Kubernetes by using docker cluster, consisting of a _master_ node which hosts the API server and orchestrates work
+and numbers of _worker_ node which receives work from the master.
 
 Here's a diagram of what the final result will look like:
 ![Kubernetes Single Node on Docker](k8s-docker.png)
@@ -74,54 +81,146 @@ This pattern is necessary because the `flannel` daemon is responsible for settin
 all of the Docker containers created by Kubernetes.  To achieve this, it must run outside of the _main_ Docker daemon.  However,
 it is still useful to use containers for deployment and management, so we create a simpler _bootstrap_ daemon to achieve this.
 
-You can specify k8s version on very node before install:
+## Starting a Cluster
 
-```
+An example cluster is listed below:
+
+| IP Address  |   Role   |
+|-------------|----------|
+|10.10.102.152|   node   |
+|10.10.102.150|node (and master)|
+
+Optional, you can specify version before deployment, otherwise, we'll use latest `hyperkube` release as default.
+
+```sh
 export K8S_VERSION=<your_k8s_version (e.g. 1.0.3)>
 ```
 
-Otherwise, we'll use latest `hyperkube` image as default k8s version.
+Every machine in `NODES` will be deployed as a Node (Minion), and you need to choose one of the `NODES` as Master, see below:
 
-## Master Node
-
-The first step in the process is to initialize the master node.
-
-Clone the Kubernetes repo, and run [master.sh](docker-multinode/master.sh) on the master machine with root:
+In `cluster/` directory:
 
 ```sh
-cd kubernetes/docs/getting-started-guides/docker-multinode/
-./master.sh
+export NODES="vcap@10.10.102.150 vcap@10.10.102.152"
+export MASTER="vcap@10.10.102.150"
+export KUBERNETES_PROVIDER=docker-cluster ./kube-up.sh
 ```
 
-`Master done!`
+> Check `cluster/docker-cluster/config-default.sh` for more supported ENVs
 
-See [here](docker-multinode/master.md) for detailed instructions explanation.
+If all things goes right, you will see the below message from console indicating the k8s is up.
 
-## Adding a worker node
+```console
+Deploy Complete!
+... calling validate-cluster 
+... Everything is OK! 
+```
 
-Once your master is up and running you can add one or more workers on different machines.
+### Add another Node into cluster
 
-Clone the Kubernetes repo, and run [worker.sh](docker-multinode/worker.sh) on the worker machine with root:
+Adding a Node to existing cluster is quite easy, just set `NODE_ONLY` to clarify you want to provision Node only:
 
 ```sh
-export MASTER_IP=<your_master_ip (e.g. 1.2.3.4)>
-cd kubernetes/docs/getting-started-guides/docker-multinode/
-./worker.sh
+export NODE_ONLY=yes
+export NODES="vcap@10.10.102.153"
+export MASTER="vcap@10.10.102.150"
 ```
 
-`Worker done!`
+## Test it out
 
-See [here](docker-multinode/worker.md) for detailed instructions explanation.
+On every node, you can see there're two containers running by `docker ps`:
 
-## Deploy a DNS
+```console
+kube_in_docker_proxy_xxx
+kube_in_docker_kubelet_xxx
+```
+
+And on Master node, you can see extra master containers running:
+
+```console
+k8s_scheduler.xxx
+k8s_apiserver.xxx
+k8s_controller-manager.xxx
+```
+
+> Currently, we assume 'Master only' node is meaningless, but please fire up issue if you want that, we can set `-runonce=false` for kubelet on the Master node
+
+As we use `hyperkube` image to run k8s, we **do not** need to compile binaries, please download and extract `kubectl` binary from [releases page](https://github.com/kubernetes/kubernetes/releases).
+
+At last, use `$ kubectl get nodes` to see if all of your nodes are ready.
+
+```console
+$ kubectl get nodes
+NAME            LABELS                                 STATUS
+10.10.102.150   kubernetes.io/hostname=10.10.103.150   Ready
+10.10.102.153   kubernetes.io/hostname=10.10.102.153   Ready
+```
+
+### Deploy a DNS
 
 See [here](docker-multinode/deployDNS.md) for instructions.
 
-## Testing your cluster
+Then you can run Kubernetes [guest-example](../../examples/guestbook/) to build a redis backend cluster on the k8s．
 
-Once your cluster has been created you can [test it out](docker-multinode/testing.md)
+## Customize
 
-For more complete applications, please look in the [examples directory](../../examples/)
+One of the biggest benefits of using Docker to run Kubernetes is users can customize the cluster freely before you running `kube-up.sh`:
+
+### master
+
+You need to enable **comstomized master mode** before deploy:
+
+```sh
+export MASTER_CONF=yes
+```
+
+The configure file of Master locates in `docker-cluster/kube-config/master-multi.json`, which will be mounted as volume for Master Pod to comsume, you can modify it freely **before deploying**.
+
+In this mode, you can even change the configuration of Master after the deployment has done, see:
+
+1. Login the Master node
+2. Change the content in `~/docker-cluster/kube-config/master-multi.json`
+3. Restart the affected master containers
+
+### kubelet
+
+Except a few basic options defined in `provision/master.sh|node.sh`, you can customize the `docker-cluster/kube-config/kubelet.env` freely to add or update `kubelet` options **before deploying**.
+
+## Tear Down
+
+In `cluster/` directory:
+
+```sh
+export NODES="vcap@10.10.102.150 vcap@10.10.102.152"
+export KUBERNETES_PROVIDER=docker-cluster ./kube-down.sh
+```
+
+## Trouble shooting
+
+Although using docker to deploy k8s is much simpler than ordinary way, here're some tips to follow if there's any trouble.
+
+### What did the scripts do?
+
+1. Start a bootstrap daemon
+2. Start `flannel` on every node's bootstrap daemon, `etcd` on Master's bootstrap daemon
+3. Start `kubelet` & `proxy` containers by using `hyperkube` image on every node
+4. `kubelet` on the Master node will start master Pod (contains `api-server`, `controller-manager` & `scheduler`)from a json file, that file is bind mounted in a host dir.
+
+See [docker-multinode/master.md](docker-multinode/master.md) and [docker-multinode/worker.md](docker-multinode/worker.md) for detailed instructions explanation.
+
+### Useful tips
+
+1. Make sure you have access to the images stored in `gcr.io`, otherwise, you need to mannually load `hyperkube` image into your docker daemon and `etcd` into docker bootstrap daemon.
+
+2. As we said, there're two kinds of daemon running on a node. The bootstrap daemon works on `-H unix:///var/run/docker-bootstrap.sock` with work_dir `/var/lib/docker-bootstrap`. Thus re-configuring and restarting docker daemon will never influence etcd and flanneld.
+
+3. For k8s admins, you should learn to manage process by using docker container, `docker ps`, `docker logs` & `docker exec` solve most problems.
+
+### Limitations
+
+Due to `kubelet` runs insider docker container, there's known issue of secrets volume failure as there's no mount propagation. See: [#13791](https://github.com/kubernetes/kubernetes/pull/13791) , and the root cause: [docker #15648](https://github.com/docker/docker/pull/15648)
+
+`hostDir` and `emptyDir` will not be influenced, but other volume types handled by `kubelet` like NFS volume will also exposed to the issues above
 
 
 <!-- BEGIN MUNGE: GENERATED_ANALYTICS -->

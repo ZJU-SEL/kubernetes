@@ -51,3 +51,4 @@ function verify() {
 }
 
 verify $1
+

@@ -46,3 +46,4 @@ export SSH_OPTS=${SSH_OPTS:-"-oStrictHostKeyChecking=no -oUserKnownHostsFile=/de
 # Define the IP range used for flannel overlay network, should not conflict with SERVICE_CLUSTER_IP_RANGE
 export FLANNEL_VERSION=${FLANNEL_VERSION:-"0.4.0"}
 export FLANNEL_NET=${FLANNEL_NET:-10.16.0.0/16}
+

@@ -38,6 +38,7 @@ if [[ ! -z $1 ]]; then
 
 fi
 
+# Wait for flanneld ready
 sleep 2
 
 # We use eth0 for default, may make it configurable in future
@@ -86,5 +87,7 @@ function verify-network() {
   printf "\n"
 }
 
-# We need to verfiy it here as user is allow to use their own network solution instead of flannel
+# We need to verfiy it here as user is allowed to use their own network solution instead of flannel,
+# so we can not verify network afterwards
 verify-network
+
