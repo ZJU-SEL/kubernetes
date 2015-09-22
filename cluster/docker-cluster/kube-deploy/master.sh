@@ -30,7 +30,8 @@ start_k8s(){
         /usr/local/bin/etcd --addr=127.0.0.1:4001 \
         --bind-addr=0.0.0.0:4001 \
         --data-dir=/var/etcd/data
-
+    
+    # Wait for etcd ready
     sleep 3
 
     # We set MASTER_IP here to let config-network know we are deploying a master
@@ -78,3 +79,4 @@ bootstrap_daemon
 echo "... Starting k8s"
 start_k8s
 echo "Master done!"
+

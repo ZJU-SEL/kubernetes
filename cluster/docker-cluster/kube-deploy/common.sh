@@ -80,7 +80,8 @@ function bootstrap_daemon() {
             --bridge=none --graph=/var/lib/docker-bootstrap \
             2> /var/log/docker-bootstrap.log 1> /dev/null
 
-        sleep 3
+        # Wait for bootstrap daemon ready
+        sleep 2
     else
         echo "... Bootstrap daemon already existed, try to clear its containers"
         clear_bootstrap_containers >/dev/null 2>&1
@@ -93,3 +94,4 @@ function start-network() {
   # $1 is used for config-network to know if it will deploy a master
   ~/docker-cluster/config-network.sh $1
 }
+

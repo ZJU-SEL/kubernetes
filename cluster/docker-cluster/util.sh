@@ -217,3 +217,4 @@ function kube-push {
 function prepare-e2e() {
   echo "Kube-in-docker doesn't have special preparations for e2e tests" 1>&2
 }
+
