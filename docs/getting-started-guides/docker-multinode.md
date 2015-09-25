@@ -39,10 +39,6 @@ _Note_:
 These instructions are somewhat significantly more advanced than the [single node](docker.md) instructions.  If you are
 interested in just starting to explore Kubernetes, we recommend that you start there.
 
-_Note_:
-There is a [bug](https://github.com/docker/docker/issues/14106) in Docker 1.7.0 that prevents this from working correctly.
-Please install Docker 1.6.2 or Docker 1.7.1.
-
 **Table of Contents**
 
 - [Prerequisites](#prerequisites)
@@ -57,7 +53,7 @@ Please install Docker 1.6.2 or Docker 1.7.1.
 
 ## Prerequisites
 
-1. The nodes have installed Docker with right version.
+1. The nodes have installed Docker with right version. There is a [bug](https://github.com/docker/docker/issues/14106) in Docker 1.7.0 that prevents this from working correctly. Please install Docker 1.6.2 or Docker 1.7.1 or higher.
 2. All machines can communicate with each other, no need to connect Internet (but should configure to use
 private docker registry in this case).
 3. All the remote servers are ssh accessible.
@@ -96,7 +92,7 @@ Optional, you can specify version before deployment, otherwise, we'll use latest
 export K8S_VERSION=<your_k8s_version (e.g. 1.0.3)>
 ```
 
-Every machine in `NODES` will be deployed as a Node (Minion), and you need to choose one of the `NODES` as Master, see below:
+Every machine in `NODES` will be deployed as a Node, and you need to choose one of the `NODES` as Master, see below:
 
 In `cluster/` directory:
 
@@ -143,7 +139,7 @@ k8s_apiserver.xxx
 k8s_controller-manager.xxx
 ```
 
-> Currently, we assume 'Master only' node is meaningless, but please fire up issue if you want that, we can set `-runonce=false` for kubelet on the Master node
+> Currently, we assume 'Master only' node is meaningless, but please fire up issue if you want that, we can set `-runonce=true` for kubelet on the Master node
 
 As we use `hyperkube` image to run k8s, we **do not** need to compile binaries, please download and extract `kubectl` binary from [releases page](https://github.com/kubernetes/kubernetes/releases).
 
@@ -174,17 +170,18 @@ You need to enable **comstomized master mode** before deploy:
 export MASTER_CONF=yes
 ```
 
-The configure file of Master locates in `docker-cluster/kube-config/master-multi.json`, which will be mounted as volume for Master Pod to comsume, you can modify it freely **before deploying**.
+The configuration file of Master locates in `docker-cluster/kube-config/master-multi.json`, which will be mounted as volume for Master Pod to comsume, you can modify it freely **before deploying**.
 
 In this mode, you can even change the configuration of Master after the deployment has done, see:
 
 1. Login the Master node
 2. Change the content in `~/docker-cluster/kube-config/master-multi.json`
-3. Restart the affected master containers
+
+kubelet will auto-restart the affected master pod.
 
 ### kubelet
 
-Except a few basic options defined in `provision/master.sh|node.sh`, you can customize the `docker-cluster/kube-config/kubelet.env` freely to add or update `kubelet` options **before deploying**.
+Except a few basic options defined in `kube-deploy/master.sh|node.sh`, you can customize the `docker-cluster/kube-config/kubelet.env` freely to add or update `kubelet` options **before deploying**.
 
 ## Tear Down
 

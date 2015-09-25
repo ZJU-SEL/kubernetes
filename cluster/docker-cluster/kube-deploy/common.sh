@@ -74,7 +74,7 @@ function bootstrap_daemon() {
     echo "... Start Bootstrap daemon"
     PID=`ps -eaf | grep 'unix:///var/run/docker-bootstrap.sock' | grep -v grep | awk '{print $2}'`
 
-    if [[ "" ==  "$PID" ]]; then
+    if [[ -z "$PID" ]]; then
         sudo -b docker -d -H unix:///var/run/docker-bootstrap.sock \
             -p /var/run/docker-bootstrap.pid --iptables=false --ip-masq=false \
             --bridge=none --graph=/var/lib/docker-bootstrap \
