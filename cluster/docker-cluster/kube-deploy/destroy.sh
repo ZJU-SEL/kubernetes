@@ -23,12 +23,12 @@ function clear_old_bootstrap {
     echo "... Bootstrap daemon already started, destroying"
     PID=`ps -eaf | grep 'unix:///var/run/docker-bootstrap.sock' | grep -v grep | awk '{print $2}'`
 
-    if [[ "" !=  "$PID" ]]; then
+    if [[ ! -z "$PID" ]]; then
         clear_bootstrap_containers
         kill -9 $PID
         echo "... Clearing bootstrap dir"
-        rm -rf /var/lib/docker-bootstrap || true
-        # Have to warn user some dirs left
+        # Have to warn user some dirs may be left
+        rm -rf /var/lib/docker-bootstrap || true; \
         echo "Warning: Some directories can not be deleted, you need to clear them mannually"
     fi
 }
@@ -36,7 +36,7 @@ function clear_old_bootstrap {
 function clear_bootstrap_containers {
   # Clean the bootstrap containers
   containers=`docker -H unix:///var/run/docker-bootstrap.sock ps -aq`
-  if [[ "" !=  "$containers" ]]; then
+  if [[ ! -z  "$containers" ]]; then
       # Sometimes cleaning fs fails, leaving those garbage for now
       docker -H unix:///var/run/docker-bootstrap.sock rm -vf $containers || true
   else
@@ -50,7 +50,7 @@ function clear_old_components() {
 
   # Stop & rm
   containers=`docker ps -a | grep -E "kube_in_docker|k8s-master" | awk '{print $1}'`
-  if [[ "" !=  "$containers" ]]; then
+  if [[ ! -z  "$containers" ]]; then
       docker rm -vf $containers || true
   else
       echo "Nothing to clear"
@@ -58,7 +58,7 @@ function clear_old_components() {
 
   # Just stop, in case users have their own hyperkube containers
   suspicious=`docker ps | grep -E "/hyperkube kubelet|/hyperkube proxy" | awk '{print $1}'`
-  if [[ "" !=  "$suspicious" ]]; then
+  if [[ ! -z  "$suspicious" ]]; then
       docker stop $suspicious
       echo "... ... And stopped some users' redundant kubelet"
       stubborn=`docker ps | grep -E "/hyperkube kubelet|/hyperkube proxy" | awk '{print $1}'`
