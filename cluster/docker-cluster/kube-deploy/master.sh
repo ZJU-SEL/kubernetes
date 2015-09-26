@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# A scripts to install k8s worker node.
+# A scripts to install k8s master node.
 
 set -e
 
@@ -43,7 +43,7 @@ start_k8s(){
 
     if [[ "yes" == $MASTER_CONF ]]; then
         # Tell kubelet mount user's master configure file inside
-        MASTER_CONF="-v $HOME/docker-cluster/kube-config/master-multi.json:/etc/kubernetes/manifests-multi/master.json"
+        MASTER_CONF="-v $HOME/master-multi.json:/etc/kubernetes/manifests-multi/master.json"
     else
         # Clear any illegal value
         MASTER_CONF=""

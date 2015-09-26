@@ -154,7 +154,7 @@ function deploy-node-master() {
   # copy the scripts to the ~/docker-cluster directory on the master
   echo "... Deploying Master on machine $MASTER_IP"
   echo
-  scp -r $SSH_OPTS docker-cluster "${MASTER}:~"
+  scp -r $SSH_OPTS images/hyperkube/master-multi.json docker-cluster "${MASTER}:~"
 
   # remote login to MASTER and use sudo to configue k8s master
   ssh $SSH_OPTS -t $MASTER "sudo bash ~/docker-cluster/kube-deploy/master.sh;"

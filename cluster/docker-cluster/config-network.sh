@@ -34,7 +34,7 @@ if [[ ! -z $1 ]]; then
   docker -H unix:///var/run/docker-bootstrap.sock run \
     --net=host gcr.io/google_containers/etcd:$ETCD_VERSION \
     etcdctl set /coreos.com/network/config \
-    "{ \"Network\": \"$FLANNEL_NET\", \"Backend\": {\"Type\": \"vxlan\"}}"
+    "{ 'Network': '$FLANNEL_NET', 'Backend': {'Type': 'vxlan'}}"
 
 fi
 
