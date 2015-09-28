@@ -84,7 +84,7 @@ An example cluster is listed below:
 | IP Address  |   Role   |
 |-------------|----------|
 |10.10.102.152|   node   |
-|10.10.102.150|node (and master)|
+|10.10.102.150|  master  |
 
 Optional, you can specify version before deployment, otherwise, we'll use latest `hyperkube` release as default.
 
@@ -92,12 +92,10 @@ Optional, you can specify version before deployment, otherwise, we'll use latest
 export K8S_VERSION=<your_k8s_version (e.g. 1.0.3)>
 ```
 
-Every machine in `NODES` will be deployed as a Node, and you need to choose one of the `NODES` as Master, see below:
-
 In `cluster/` directory:
 
 ```sh
-export NODES="vcap@10.10.102.150 vcap@10.10.102.152"
+export NODES="vcap@10.10.102.152"
 export MASTER="vcap@10.10.102.150"
 export KUBERNETES_PROVIDER=docker-cluster ./kube-up.sh
 ```

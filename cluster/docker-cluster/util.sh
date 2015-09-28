@@ -21,7 +21,7 @@ set -e
 # Verify SSH is available and ENVs are set
 # 
 # Assumed vars:
-#   MASTER
+#   MASTER 
 #   NODES
 function verify-prereqs {
   local rc
@@ -61,12 +61,13 @@ function verify-prereqs {
 #   SSH_OPTS
 function validate-cluster {
   sleep 5 # For now we just sleep to wait the world
+
+  ssh $SSH_OPTS $MASTER "bash ~/docker-cluster/kube-deploy/verify.sh master"
+
   for node in $NODES
   do
     {
-      if [ "$node" == $MASTER ]; then
-        ssh $SSH_OPTS $node "bash ~/docker-cluster/kube-deploy/verify.sh master"
-      else
+      if [ "$node" != $MASTER ]; then
         ssh $SSH_OPTS $node "bash ~/docker-cluster/kube-deploy/verify.sh node"
       fi
     }
@@ -93,15 +94,16 @@ function kube-up() {
 
   generate_env
 
-  NUM_MINIONS=0
+  if [[ "yes" != $NODE_ONLY ]]; then
+    deploy-node-master $MASTER_IP
+  fi
+  
+  NUM_MINIONS=1
+ 
   for node in $NODES
   do
     {
-      if [ "$node" == $MASTER ]; then
-        if [[ "yes" != $NODE_ONLY ]]; then
-          deploy-node-master $MASTER_IP
-        fi
-      else
+      if [ "$node" != $MASTER ]; then
         deploy-node ${node#*@}
       fi
       NUM_MINIONS=$((NUM_MINIONS+1))

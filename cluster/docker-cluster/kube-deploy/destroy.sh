@@ -27,6 +27,9 @@ function clear_old_bootstrap {
         clear_bootstrap_containers
         kill -9 $PID
         echo "... Clearing bootstrap dir"
+        if [[ -d "/var/lib/docker-bootstrap" ]]; then
+          umount $(mount | grep /var/lib/docker-bootstrap | awk '{print $1}')
+        fi
         # Have to warn user some dirs may be left
         rm -rf /var/lib/docker-bootstrap || true; \
         echo "Warning: Some directories can not be deleted, you need to clear them mannually"
