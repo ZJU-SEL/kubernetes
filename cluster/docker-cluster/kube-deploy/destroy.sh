@@ -80,4 +80,3 @@ function clear_all() {
 # Make all the functions in this scripts can be run as parameter
 # This is useful in kube-down.sh 
 $@
-

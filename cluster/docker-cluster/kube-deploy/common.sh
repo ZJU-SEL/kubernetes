@@ -17,7 +17,8 @@
 # A common lib for master.sh & node.sh to use
 source ~/docker-cluster/kube-config/node.env
 source ~/docker-cluster/kube-config/kubelet.env
-source ~/docker-cluster/kube-deploy/destroy.sh
+
+DESTROY_SH=~/docker-cluster/kube-deploy/destroy.sh
 
 : ${K8S_VERSION?"K8S_VERSION is not exported on Node"}
 
@@ -29,7 +30,7 @@ fi
 
 # Make sure docker daemon is running
 if ( ! ps -ef | grep "/usr/bin/docker" | grep -v 'grep' &> /dev/null ); then
-    echo "Docker is not running on this machine!"
+    echo "Docker daemon is not running on this machine!"
     exit 1
 fi
 
@@ -84,7 +85,7 @@ function bootstrap_daemon() {
         sleep 2
     else
         echo "... Bootstrap daemon already existed, try to clear its containers"
-        clear_bootstrap_containers >/dev/null 2>&1
+        $DESTROY_SH clear_bootstrap_containers >/dev/null 2>&1
     fi
 }
 
