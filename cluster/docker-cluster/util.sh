@@ -85,6 +85,7 @@ function validate-cluster {
 # Assumed vars:
 #   MASTER
 #   NODES
+#   NODE_ONLY
 # Vars set:
 #   KUBE_ROOT
 #   NUM_MINIONS
@@ -94,10 +95,6 @@ function kube-up() {
 
   generate_env
 
-  if [[ "yes" != $NODE_ONLY ]]; then
-    deploy-node-master $MASTER_IP
-  fi
-  
   NUM_MINIONS=1
  
   for node in $NODES
@@ -105,10 +102,28 @@ function kube-up() {
     {
       if [ "$node" != $MASTER ]; then
         deploy-node ${node#*@}
+      else
+        # This machine occurs both in NODEs & MASTER, we
+        # should deploy it as a "master with node"
+        #
+        # NODE_ONLY=yes means that we only want to join existing master
+        if [[ "yes" != $NODE_ONLY ]]; then
+          deploy-node-master "WITH_NODE"
+          # In this case no need to deploy master seperately
+          DEPLOYED="yes"
+        fi
       fi
       NUM_MINIONS=$((NUM_MINIONS+1))
     }
   done
+
+  # Deploy master seperately only when:
+  # 1. not node-only mode
+  # 2. this machine is only a master 
+  if [[ "yes" != $NODE_ONLY && -z $DEPLOYED ]]; then
+    deploy-node-master
+  fi
+
   wait
 
   export NUM_MINIONS=$NUM_MINIONS
@@ -152,6 +167,7 @@ EOF
 #   MASTER_IP
 #   MASTER
 #   SSH_OPTS
+#   WITH_NODE(in $1)
 function deploy-node-master() {
   # copy the scripts to the ~/docker-cluster directory on the master
   echo "... Deploying Master on machine $MASTER_IP"
@@ -159,7 +175,8 @@ function deploy-node-master() {
   scp -r $SSH_OPTS images/hyperkube/master-multi.json docker-cluster "${MASTER}:~"
 
   # remote login to MASTER and use sudo to configue k8s master
-  ssh $SSH_OPTS -t $MASTER "sudo bash ~/docker-cluster/kube-deploy/master.sh;"
+  # $1 is set to 'WITH_NODE' if this machine is both master & node
+  ssh $SSH_OPTS -t $MASTER "sudo bash ~/docker-cluster/kube-deploy/master.sh $1;"
 }
 
 # Provison node

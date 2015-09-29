@@ -100,7 +100,9 @@ export MASTER="vcap@10.10.102.150"
 export KUBERNETES_PROVIDER=docker-cluster ./kube-up.sh
 ```
 
-> Check `cluster/docker-cluster/config-default.sh` for more supported ENVs
+> Please check `cluster/docker-cluster/config-default.sh` for more supported ENVs
+
+> If your MASTER is also in one of NODES, that machine will be deployed as **both master & node**
 
 If all things goes right, you will see the below message from console indicating the k8s is up.
 
@@ -135,9 +137,7 @@ And on Master node, you can see extra master containers running:
 k8s_scheduler.xxx
 k8s_apiserver.xxx
 k8s_controller-manager.xxx
-```
-
-> Currently, we assume 'Master only' node is meaningless, but please fire up issue if you want that, we can set `-runonce=true` for kubelet on the Master node
+``` 
 
 As we use `hyperkube` image to run k8s, we **do not** need to compile binaries, please download and extract `kubectl` binary from [releases page](https://github.com/kubernetes/kubernetes/releases).
 

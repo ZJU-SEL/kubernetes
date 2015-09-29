@@ -25,7 +25,7 @@ start_k8s() {
 
     start-network
 
-    clear_old_components
+    $DESTROY_SH clear_old_components
 
     # start kubelet
     docker run --net=host --privileged --restart=always -d \
