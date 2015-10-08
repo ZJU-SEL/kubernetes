@@ -15,10 +15,10 @@
 # limitations under the License.
 
 # A common lib for master.sh & node.sh to use
-source ~/docker-cluster/kube-config/node.env
-source ~/docker-cluster/kube-config/kubelet.env
+source ~/docker/kube-config/node.env
+source ~/docker/kube-config/kubelet.env
 
-DESTROY_SH=~/docker-cluster/kube-deploy/destroy.sh
+DESTROY_SH=~/docker/kube-deploy/destroy.sh
 
 : ${K8S_VERSION?"K8S_VERSION is not exported on Node"}
 
@@ -45,13 +45,13 @@ function detect_lsb() {
     *64)
         ;;
     *)
-        echo "Error: We currently only support 64-bit platforms."       
+        echo "[ERROR]: We currently only support 64-bit platforms."       
         exit 1
         ;;
     esac
 
     if command_exists lsb_release; then
-        lsb_dist="$(lsb_release -si)"
+        lsb_dist="$(lsb_release -sir | sed ':a;N;s/\n//g')"
     fi
     if [ -z ${lsb_dist} ] && [ -r /etc/lsb-release ]; then
         lsb_dist="$(. /etc/lsb-release && echo "$DISTRIB_ID")"
@@ -67,6 +67,7 @@ function detect_lsb() {
     fi
 
     export lsb_dist="$(echo ${lsb_dist} | tr '[:upper:]' '[:lower:]')"
+    echo "Detected $lsb_dist"
 }
 
 
@@ -93,6 +94,6 @@ function bootstrap_daemon() {
 function start-network() {
   echo "... Configuring network"
   # $1 is used for config-network to know if it will deploy a master
-  ~/docker-cluster/config-network.sh $1
+  ~/docker/config-network.sh $1
 }
 

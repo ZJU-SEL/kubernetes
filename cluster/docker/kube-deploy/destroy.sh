@@ -66,7 +66,7 @@ function clear_old_components() {
       echo "... ... And stopped some users' redundant kubelet"
       stubborn=`docker ps | grep -E "/hyperkube kubelet|/hyperkube proxy" | awk '{print $1}'`
       if [[ "" !=  "$stubborn" ]]; then
-          echo "... ... Warning: Found some extra kubelet|proxy running, they may fail the deployment"
+          echo "... ... [WARN]: Found some extra kubelet|proxy running, they may fail the deployment"
       fi
   fi
 }

@@ -18,10 +18,10 @@
 
 set -e
 
-source ~/docker-cluster/kube-deploy/common.sh
+source ~/docker/kube-deploy/common.sh
 
-# Set WITH_NODE based on util.sh 's decision
-WITH_NODE=$1
+# Set REGISTER_MASTER_KUBELET based on util.sh 's decision
+REGISTER_MASTER_KUBELET=$1
 
 # Start k8s components in containers
 start_k8s(){
@@ -42,7 +42,7 @@ start_k8s(){
 
     $DESTROY_SH clear_old_components
 
-    sed -i "s/VERSION/v${K8S_VERSION}/g" ~/docker-cluster/kube-config/master-multi.json
+    sed -i "s/VERSION/v${K8S_VERSION}/g" ~/docker/kube-config/master-multi.json
 
     if [[ "yes" == $MASTER_CONF ]]; then
         # Tell kubelet mount user's master configure file inside
@@ -52,13 +52,13 @@ start_k8s(){
         MASTER_CONF=""
     fi
 
-    # if WITH_NODE is set to $1, enable "master as a node"
-    if [[ "WITH_NODE" == $WITH_NODE ]]; then
+    # if REGISTER_MASTER_KUBELET is set from $1, deploy this machine as "both master & node"
+    if [[ "REGISTER_MASTER_KUBELET" == $REGISTER_MASTER_KUBELET ]]; then
         # This machine will register itself to this local master
-        WITH_NODE="--api-servers=http://localhost:8080"
+        REGISTER_MASTER_KUBELET="--api-servers=http://localhost:8080"
     else
         # Clear any illegal value
-        WITH_NODE=""
+        REGISTER_MASTER_KUBELET=""
     fi
 
     # Start kubelet & proxy, then start master components as pods
@@ -74,7 +74,7 @@ start_k8s(){
         --privileged=true \
         --name=kube_in_docker_kubelet_$RANDOM \
         gcr.io/google_containers/hyperkube:v$K8S_VERSION \
-        /hyperkube kubelet --containerized $WITH_NODE \
+        /hyperkube kubelet --containerized $REGISTER_MASTER_KUBELET \
         --config=/etc/kubernetes/manifests-multi/master.json \
         $KUBELET_OPTS
 

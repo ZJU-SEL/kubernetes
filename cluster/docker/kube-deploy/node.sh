@@ -18,7 +18,7 @@
 
 set -e
 
-source ~/docker-cluster/kube-deploy/common.sh
+source ~/docker/kube-deploy/common.sh
 
 # Start k8s components in containers
 start_k8s() {
