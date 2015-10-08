@@ -37,6 +37,8 @@ export MASTER_IP=${MASTER#*@}
 export NODE_ONLY=${NODE_ONLY:-"no"}
 # Set to 'yes' if you want to customize your k8s master
 export MASTER_CONF=${MASTER_CONF:-"no"}
+# Set to your own infra provider like 'gce', 'aws' etc.
+export INFRA=${INFRA:-"baremetal"}
 
 # (2) SSH OPTS
 # define the SSH OPTS.
