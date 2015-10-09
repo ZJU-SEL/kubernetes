@@ -20,13 +20,14 @@ set -e
 
 source ~/docker/kube-deploy/common.sh
 
-# Set REGISTER_MASTER_KUBELET based on util.sh 's decision
+# REGISTER_MASTER_KUBELET set in util.sh & passed here as $1
 REGISTER_MASTER_KUBELET=$1
 
 # Start k8s components in containers
 start_k8s(){
     
     # Start ectd
+    echo "... Etcd is running at: "
     docker -H unix:///var/run/docker-bootstrap.sock run \
         --restart=always --net=host -d \
         gcr.io/google_containers/etcd:$ETCD_VERSION \
@@ -42,7 +43,7 @@ start_k8s(){
 
     $DESTROY_SH clear_old_components
 
-    sed -i "s/VERSION/v${K8S_VERSION}/g" ~/docker/kube-config/master-multi.json
+    sed -i "s/VERSION/v${K8S_VERSION}/g" ~/master-multi.json
 
     if [[ "yes" == $MASTER_CONF ]]; then
         # Tell kubelet mount user's master configure file inside
@@ -53,7 +54,7 @@ start_k8s(){
     fi
 
     # if REGISTER_MASTER_KUBELET is set from $1, deploy this machine as "both master & node"
-    if [[ "REGISTER_MASTER_KUBELET" == $REGISTER_MASTER_KUBELET ]]; then
+    if [[ "yes" == $REGISTER_MASTER_KUBELET ]]; then
         # This machine will register itself to this local master
         REGISTER_MASTER_KUBELET="--api-servers=http://localhost:8080"
     else

@@ -17,6 +17,19 @@
 # Implementation of baremetal docker based kubernetes provider
 set -e
 
+# Install handler for signal trap
+function trap-add {
+  local handler="$1"
+  local signal="${2-EXIT}"
+  local cur
+
+  cur="$(eval "sh -c 'echo \$3' -- $(trap -p ${signal})")"
+  if [[ -n "${cur}" ]]; then
+    handler="${cur}; ${handler}"
+  fi
+
+  trap "${handler}" ${signal}
+}
 
 # Verify SSH is available and ENVs are set
 function verify-prereqs-baremetal {
@@ -45,27 +58,70 @@ function verify-prereqs-baremetal {
   fi
 }
 
-# ssh command for baremetal machines
-function ssh-baremetal() {
-  ssh $SSH_OPTS -t $1 $2
+# Deploy master (or master & node)
+#
+# Assumed vars:
+#   MASTER
+#   REGISTER_MASTER_KUBELET
+#   SSH_OPTS
+function deploy-node-master-baremetal() {
+  local files="${KUBE_ROOT}/cluster/images/hyperkube/master-multi.json \
+  ${KUBE_ROOT}/cluster/docker"
+  local dest_dir="${MASTER}:~"
+  
+  scp -r $SSH_OPTS $files $dest_dir
+  
+  local machine=$MASTER
+  local cmd="sudo bash ~/docker/kube-deploy/master.sh $REGISTER_MASTER_KUBELET;"
+  # Remotely login to $MASTER and use $cmd to deploy k8s master
+  # $REGISTER_MASTER_KUBELET is the flag when this machine is both master & node
+  ssh $SSH_OPTS -t $machine $cmd
 }
 
-# scp command for baremetal machines
-function scp-baremeatal() {
-  scp -r $SSH_OPTS $1 $2
+# Deploy node
+#
+# Assumed vars:
+#   node
+#   SSH_OPTS
+function deploy-node-baremetal() {
+  local files="${KUBE_ROOT}/cluster/docker"
+  local dest_dir="$node:~"
+  scp -r $SSH_OPTS $files $dest_dir 
+
+  # remote login to $node and use $cmd to deploy k8s node
+  ssh $SSH_OPTS -t $node "sudo bash ~/docker/kube-deploy/node.sh;" 
 }
 
 
-# Install handler for signal trap
-function trap-add {
-  local handler="$1"
-  local signal="${2-EXIT}"
-  local cur
+# Destroy k8s cluster
+#
+# Assumed vars:
+#   node
+#   SSH_OPTS
+function kube-down-baremetal() {
+  for i in ${NODES}; do
+  {
+    echo "... Cleaning on node ${i#*@}"
+    ssh -t $i "sudo bash ~/destroy.sh clear_all && rm -rf ~/docker/"
+  }
+  done 
+}
 
-  cur="$(eval "sh -c 'echo \$3' -- $(trap -p ${signal})")"
-  if [[ -n "${cur}" ]]; then
-    handler="${cur}; ${handler}"
-  fi
+# Verify cluster
+# 
+# Assumed vars:
+#   MASTER
+#   NODES
+#   SSH_OPTS
+function validate-cluster-baremetal() {
+  ssh $SSH_OPTS -t $MASTER "bash ~/docker/kube-deploy/verify.sh master"
 
-  trap "${handler}" ${signal}
+  for node in $NODES
+  do
+    {
+      if [ "$node" != $MASTER ]; then
+        ssh $SSH_OPTS -t $node "bash ~/docker/kube-deploy/verify.sh node"
+      fi
+    }
+  done
 }

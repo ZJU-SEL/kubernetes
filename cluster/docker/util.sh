@@ -17,6 +17,8 @@
 # A library of helper functions that each provider hosting Kubernetes must implement to use cluster/kube-*.sh scripts.
 set -e
 
+KUBE_ROOT=$(dirname "${BASH_SOURCE}")/../..
+source "${KUBE_ROOT}/cluster/docker/${KUBE_CONFIG_FILE-"config-default.sh"}"
 
 # Verify SSH is available and ENVs are set
 # 
@@ -25,36 +27,31 @@ set -e
 #   NODES
 #   INFRA
 function verify-prereqs {
-  echo "Infra provider is set to $INFRA"
-
   # Make sure env is properly set
   : ${MASTER?"Need to set MASTER"}
   : ${NODES?"Need to set NODES"}
 
+  case "$INFRA" in
+  "baremetal")
+      echo "Infra provider is set to: $INFRA"
+      ;;
+  *) echo "Infra provider for $INFRA is not implemented yet, welcome to contribute!"
+      ;;
+  esac
+
   # Call the function defined in specific infra provider 
-  source ../docker-$INFRA/util.sh
+  source $KUBE_ROOT/cluster/docker-$INFRA/util.sh
   verify-prereqs-$INFRA
 }
 
 # Verify cluster
 # 
 # Assumed vars:
-#   MASTER
-#   NODES
-#   SSH_OPTS
+#   INFRA
 function validate-cluster {
   sleep 5 # For now we just sleep to wait the world
 
-  ssh-to-node $MASTER "bash ~/docker/kube-deploy/verify.sh master"
-
-  for node in $NODES
-  do
-    {
-      if [ "$node" != $MASTER ]; then
-        ssh-to-node $node "bash ~/docker/kube-deploy/verify.sh node"
-      fi
-    }
-  done
+  validate-cluster-$INFRA
 
   echo
   echo "Kubernetes-in-docker cluster is deployed.  The master should be running at:"
@@ -73,13 +70,10 @@ function validate-cluster {
 #   KUBE_ROOT
 #   NUM_MINIONS
 function kube-up() {
-  KUBE_ROOT=$(dirname "${BASH_SOURCE}")/../..
-  source "docker/config-default.sh"
-
   # Generate ENVs used to deploy master and nodes
   generate_env
 
-  NUM_MINIONS=1
+  NUM_MINIONS=0
  
   for node in $NODES
   do
@@ -92,19 +86,18 @@ function kube-up() {
         #
         # NODE_ONLY=yes means that we only want to join existing master
         if [[ "yes" != $NODE_ONLY ]]; then
-          deploy-node-master "REGISTER_MASTER_KUBELET"
-          # In this case no need to deploy master seperately
-          master_deployed="yes"
+          REGISTER_MASTER_KUBELET="yes"
+          deploy-node-master 
         fi
       fi
       NUM_MINIONS=$((NUM_MINIONS+1))
     }
   done
 
-  # Need to deploy master seperately only when:
-  # 1. not node-only mode
-  # 2. this machine is only a master
-  if [[ "yes" != $NODE_ONLY && "yes" != $master_deployed ]]; then
+  # Need to deploy master separately only when:
+  # 1. not in NODE_ONLY mode
+  # 2. master is not deployed during the loop above
+  if [[ "yes" != $NODE_ONLY && "yes" != $REGISTER_MASTER_KUBELET ]]; then
     deploy-node-master
   fi
 
@@ -133,7 +126,7 @@ export MASTER_CONF=$MASTER_CONF
 export SSH_OPTS="$SSH_OPTS"
 export FLANNEL_NET=$FLANNEL_NET
 EOF
-  cat docker/kube-config/node.env
+  cat ${KUBE_ROOT}/cluster/docker/kube-config/node.env
 
   read -p "Are you sure? (y|n) " -n 1 -r
   echo
@@ -145,55 +138,37 @@ EOF
 
 }
 
-# Provison master
+# Deploy master (or master & node)
 #
 # Assumed vars:
 #   MASTER_IP
-#   MASTER
-#   SSH_OPTS
-#   WITH_NODE(in $1)
+#   INFRA
 function deploy-node-master() {
   # copy the scripts to the ~/docker directory on the master
   echo "... Deploying Master on machine $MASTER_IP"
   echo
-  scp-to-node images/hyperkube/master-multi.json docker "${MASTER}:~"
-
-  # remote login to MASTER and use sudo to configue k8s master
-  # $1 is set to 'WITH_NODE' if this machine is both master & node
-  ssh-to-node $MASTER "sudo bash ~/docker/kube-deploy/master.sh $1;"
+  deploy-node-master-$INFRA
 }
 
-# Provison node
+# Deploy node
 #
 # Assumed vars:
-#   MASTER_IP
-#   MASTER
-#   SSH_OPTS
+#   INFRA
+#   node
 function deploy-node() {
   # copy the scripts to the ~/docker directory on the node
-  echo "... Deploying Node on machine $1"
+  echo "... Deploying Node on machine $node"
   echo
-  scp-to-node docker "$node:~"
-
-  # remote login to node and use sudo to configue k8s node
-  ssh-to-node $node "sudo bash ~/docker/kube-deploy/node.sh;" 
+  deploy-node-$INFRA
 }
 
 # Delete a kubernetes cluster
 #
 # Assumed vars:
-#   NODES
+#   INFRA
 function kube-down {
-  KUBE_ROOT=$(dirname "${BASH_SOURCE}")/../..
-  source "${KUBE_ROOT}/cluster/docker/${KUBE_CONFIG_FILE-"config-default.sh"}"
-
-  for i in ${NODES}; do
-  {
-    echo "... Cleaning on node ${i#*@}"
-    ssh -t $i "sudo bash ~/docker/kube-deploy/destroy.sh clear_all \
-    && rm -rf ~/docker/"
-  }
-  done
+  # NOTE kube-dwon can only be called after deployed
+  kube-down-$INFRA
   wait
 }
 
@@ -205,36 +180,4 @@ function kube-push {
 # Perform preparations required to run e2e tests
 function prepare-e2e() {
   echo "k8s in docker doesn't have special preparations for e2e tests" 1>&2
-}
-
-# SSH functions to specific node, should be implemented in other place
-function ssh-to-node() {
-  local machine=$1
-  local cmd=$2
-
-  case "$INFRA" in
-
-  "baremetal")
-      # ssh-baremetal is defined in cluster/docker-baremetal
-      ssh-baremetal $machine $cmd
-      ;;
-  *) echo "ssh-to-node() of $INFRA is not implemented yet, welcome to contribute!"
-      ;;
-  esac
-}
-
-# scp files to specific node, should be implemented in other place
-function scp-to-node() {
-  local files=$1
-  local dir=$2
-
-  case "$INFRA" in
-
-  "baremetal")
-      # scp-baremetal is defined in cluster/docker-baremetal
-      scp-baremeatal $files $dir
-      ;;
-  *) echo "scp-to-node() of $INFRA is not implemented yet, welcome to contribute!"
-      ;;
-  esac
 }
