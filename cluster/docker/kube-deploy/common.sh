@@ -51,7 +51,7 @@ function detect_lsb() {
     esac
 
     if command_exists lsb_release; then
-        lsb_dist="$(lsb_release -sir | sed ':a;N;s/\n//g')"
+        lsb_dist="$(lsb_release -si)"
     fi
     if [ -z ${lsb_dist} ] && [ -r /etc/lsb-release ]; then
         lsb_dist="$(. /etc/lsb-release && echo "$DISTRIB_ID")"
@@ -67,16 +67,15 @@ function detect_lsb() {
     fi
 
     export lsb_dist="$(echo ${lsb_dist} | tr '[:upper:]' '[:lower:]')"
-    echo "Detected $lsb_dist"
+    echo "... ... OS distro Detected: $lsb_dist"
 }
 
 
 # Start the bootstrap daemon
 function bootstrap_daemon() {
-    echo "... Start Bootstrap daemon"
-    PID=`ps -eaf | grep 'unix:///var/run/docker-bootstrap.sock' | grep -v grep | awk '{print $2}'`
+    local pid=`ps -eaf | grep 'unix:///var/run/docker-bootstrap.sock' | grep -v grep | awk '{print $2}'`
 
-    if [[ -z "$PID" ]]; then
+    if [[ -z "$pid" ]]; then
         sudo -b docker -d -H unix:///var/run/docker-bootstrap.sock \
             -p /var/run/docker-bootstrap.pid --iptables=false --ip-masq=false \
             --bridge=none --graph=/var/lib/docker-bootstrap \
@@ -88,12 +87,14 @@ function bootstrap_daemon() {
         echo "... Bootstrap daemon already existed, try to clear its containers"
         $DESTROY_SH clear_bootstrap_containers >/dev/null 2>&1
     fi
+
+    echo "... Bootstrap daemon started"
 }
 
-# kubelet & kubeproxy use host network, so we can deal with container network seperately
+# Deploy network implementation for k8s
 function start-network() {
   echo "... Configuring network"
-  # $1 is used for config-network to know if it will deploy a master
+  # $1 is a flag for config-network to know if it is deploying a master
   ~/docker/config-network.sh $1
 }
 

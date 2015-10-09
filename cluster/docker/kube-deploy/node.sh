@@ -21,7 +21,7 @@ set -e
 source ~/docker/kube-deploy/common.sh
 
 # Start k8s components in containers
-start_k8s() {
+function start_k8s() {
 
     start-network
 

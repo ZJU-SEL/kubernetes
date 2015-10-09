@@ -17,8 +17,25 @@
 # Implementation of baremetal docker based kubernetes provider
 set -e
 
+# Command used for remotely deploy
+SSH_TO_NODE="ssh $SSH_OPTS -t"
+SCP_TO_NODE="scp $SSH_OPTS -r"
 
-# Verify SSH is available and ENVs are set
+# Install handler for signal trap
+function trap-add {
+  local handler="$1"
+  local signal="${2-EXIT}"
+  local cur
+
+  cur="$(eval "sh -c 'echo \$3' -- $(trap -p ${signal})")"
+  if [[ -n "${cur}" ]]; then
+    handler="${cur}; ${handler}"
+  fi
+
+  trap "${handler}" ${signal}
+}
+
+# Verify ssh is available
 function verify-prereqs-baremetal {
   local rc
 
@@ -34,7 +51,7 @@ function verify-prereqs-baremetal {
   ssh-add -L 1> /dev/null 2> /dev/null || rc="$?"
   # "The agent has no identities."
   if [[ "${rc}" -eq 1 ]]; then
-    # Try adding one of the default identities, with or without passphrase.
+    # Try adding one of the default identities, with or without pass phrase.
     ssh-add || true
   fi
   # Expect at least one identity to be available.
@@ -45,27 +62,82 @@ function verify-prereqs-baremetal {
   fi
 }
 
-# ssh command for baremetal machines
-function ssh-baremetal() {
-  ssh $SSH_OPTS -t $1 $2
+# Deploy master (or master & node)
+# 1. Copy files
+# 2. Run master scripts
+#
+# Assumed vars:
+#   MASTER
+#   REGISTER_MASTER_KUBELET
+#   SSH_OPTS
+function deploy-node-master-baremetal() {
+  local files="${KUBE_ROOT}/cluster/images/hyperkube/master-multi.json \
+  ${KUBE_ROOT}/cluster/docker"
+  local dest_dir="${MASTER}:~"
+
+  $SCP_TO_NODE $files $dest_dir
+  
+  local machine=$MASTER
+  # $REGISTER_MASTER_KUBELET is the flag that this machine is both master & node
+  local cmd="sudo bash ~/docker/kube-deploy/master.sh $REGISTER_MASTER_KUBELET;"
+
+  # Remotely login to $MASTER and use $cmd to deploy k8s master
+  $SSH_TO_NODE $machine $cmd
 }
 
-# scp command for baremetal machines
-function scp-baremeatal() {
-  scp -r $SSH_OPTS $1 $2
+# Deploy nodes
+# 1. Copy files
+# 2. Run node scripts
+#
+# Assumed vars:
+#   node
+#   SSH_OPTS
+function deploy-node-baremetal() {
+  local files="${KUBE_ROOT}/cluster/docker"
+  local dest_dir="$node:~"
+
+  $SCP_TO_NODE $SSH_OPTS $files $dest_dir 
+
+  # Remotely login to $node and use $cmd to deploy k8s node
+  local machine=$node
+  local cmd="sudo bash ~/docker/kube-deploy/node.sh;"
+
+  $SSH_TO_NODE $machine $cmd 
 }
 
+# Destroy k8s cluster
+#
+# Assumed vars:
+#   node
+#   SSH_OPTS
+function kube-down-baremetal() {
+  for node in ${NODES}; do
+  {
+    echo "... Cleaning on node ${node#*@}"
+    $SSH_TO_NODE $node "sudo bash ~/destroy.sh clear_all && rm -rf ~/docker/"
+  }
+  done 
+}
 
-# Install handler for signal trap
-function trap-add {
-  local handler="$1"
-  local signal="${2-EXIT}"
-  local cur
+# Verify cluster
+# 
+# Assumed vars:
+#   MASTER
+#   NODES
+#   SSH_OPTS
+function validate-cluster-baremetal() {
+  # Validate master
+  echo "... Validating Master $MASTER"
+  $SSH_TO_NODE $MASTER "bash ~/docker/kube-deploy/verify.sh master"
 
-  cur="$(eval "sh -c 'echo \$3' -- $(trap -p ${signal})")"
-  if [[ -n "${cur}" ]]; then
-    handler="${cur}; ${handler}"
-  fi
-
-  trap "${handler}" ${signal}
+  # Validate nodes
+  for node in $NODES
+  do
+    {
+      if [ "$node" != $MASTER ]; then
+        echo "... Validating Node $node"
+        $SSH_TO_NODE $node "bash ~/docker/kube-deploy/verify.sh node"
+      fi
+    }
+  done
 }

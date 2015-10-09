@@ -39,7 +39,7 @@ if [[ ! -z $1 ]]; then
 fi
 
 # Wait for flanneld ready
-sleep 2
+sleep 3
 
 # We use eth0 for default, may make it configurable in future
 flannelCID=$(docker -H unix:///var/run/docker-bootstrap.sock run \
@@ -84,6 +84,9 @@ case "$lsb_dist" in
         exit 1
     ;;
 esac
+
+# Wait for docker daemon ready
+sleep 3
 
 # Verify network 
 function verify-network() {
