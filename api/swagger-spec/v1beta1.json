@@ -3129,7 +3129,8 @@
     "description": "GitRepoVolumeSource represents a volume that is pulled from git when the pod is created.",
     "required": [
      "repository",
-     "revision"
+     "revision",
+     "directory"
     ],
     "properties": {
      "repository": {
@@ -3139,6 +3140,10 @@
      "revision": {
       "type": "string",
       "description": "Commit hash for the specified revision."
+     },
+     "directory": {
+      "type": "string",
+      "description": "Target directory name"
      }
     }
    },
