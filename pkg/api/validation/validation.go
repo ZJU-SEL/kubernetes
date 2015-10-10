@@ -441,8 +441,25 @@ func validateHostPathVolumeSource(hostPath *api.HostPathVolumeSource) errs.Valid
 
 func validateGitRepoVolumeSource(gitRepo *api.GitRepoVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
+	target := gitRepo.Directory
+
 	if gitRepo.Repository == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("repository"))
+	}
+	if path.IsAbs(target) {
+		allErrs = append(allErrs, errs.NewFieldInvalid("directory", target, "must not be an absolute path"))
+	}
+	items := strings.Split(target, string(os.PathSeparator))
+	for _, item := range items {
+		if item == ".." {
+			allErrs = append(allErrs, errs.NewFieldInvalid("directory", target, "must not contain \"..\""))
+		}
+		if item == " " {
+			allErrs = append(allErrs, errs.NewFieldInvalid("directory", target, "must not contain spaces"))
+		}
+	}
+	if strings.HasPrefix(items[0], "..") && len(items[0]) > 2 {
+		allErrs = append(allErrs, errs.NewFieldInvalid("directory", target, "must not start with \"..\""))
 	}
 	return allErrs
 }

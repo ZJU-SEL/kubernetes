@@ -78,14 +78,22 @@ func testSetUp(plug volume.VolumePlugin, builder volume.Builder, t *testing.T) {
 		},
 	}
 	g := builder.(*gitRepoVolumeBuilder)
+
 	g.exec = &fake
 
 	err := g.SetUp()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+
+	cloneCmd := []string{"git", "clone", g.source}
+
+	if g.target != "" {
+		cloneCmd = append(cloneCmd, g.target)
+	}
+
 	expectedCmds := [][]string{
-		{"git", "clone", g.source},
+		cloneCmd,
 		{"git", "checkout", g.revision},
 		{"git", "reset", "--hard"},
 	}
@@ -95,13 +103,24 @@ func testSetUp(plug volume.VolumePlugin, builder volume.Builder, t *testing.T) {
 	if !reflect.DeepEqual(expectedCmds, fcmd.CombinedOutputLog) {
 		t.Errorf("unexpected commands: %v, expected: %v", fcmd.CombinedOutputLog, expectedCmds)
 	}
-	expectedDirs := []string{g.GetPath(), g.GetPath() + "/kubernetes", g.GetPath() + "/kubernetes"}
+
+	repoDir := ""
+	if g.target != "." {
+		repoDir = "/kubernetes"
+	}
+	expectedDirs := []string{g.GetPath(), g.GetPath() + repoDir, g.GetPath() + repoDir}
 	if len(fcmd.Dirs) != 3 || !reflect.DeepEqual(expectedDirs, fcmd.Dirs) {
 		t.Errorf("unexpected directories: %v, expected: %v", fcmd.Dirs, expectedDirs)
 	}
 }
 
 func TestPlugin(t *testing.T) {
+	testPluginWithTarget("target_dir", t)
+	testPluginWithTarget("", t)
+	testPluginWithTarget(".", t)
+}
+
+func testPluginWithTarget(targetDir string, t *testing.T) {
 	plugMgr := volume.VolumePluginMgr{}
 	plugMgr.InitPlugins(ProbeVolumePlugins(), newTestHost(t))
 
@@ -115,11 +134,13 @@ func TestPlugin(t *testing.T) {
 			GitRepo: &api.GitRepoVolumeSource{
 				Repository: "https://github.com/GoogleCloudPlatform/kubernetes.git",
 				Revision:   "2a30ce65c5ab586b98916d83385c5983edd353a1",
+				Directory:  targetDir,
 			},
 		},
 	}
 	pod := &api.Pod{ObjectMeta: api.ObjectMeta{UID: types.UID("poduid")}}
 	builder, err := plug.NewBuilder(volume.NewSpecFromVolume(spec), pod, volume.VolumeOptions{RootContext: ""})
+
 	if err != nil {
 		t.Errorf("Failed to make a new Builder: %v", err)
 	}

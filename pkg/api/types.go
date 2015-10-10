@@ -504,7 +504,9 @@ type GitRepoVolumeSource struct {
 	// Repository URL
 	Repository string `json:"repository"`
 	// Commit hash, this is optional
-	Revision string `json:"revision"`
+	Revision string `json:"revision, omitempty"`
+	// Clone target, this is optional
+	Directory string `json:"directory, omitempty"`
 	// TODO: Consider credentials here.
 }
 

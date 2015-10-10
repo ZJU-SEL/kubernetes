@@ -455,7 +455,8 @@ func TestValidateVolumes(t *testing.T) {
 		{Name: "empty", VolumeSource: api.VolumeSource{EmptyDir: &api.EmptyDirVolumeSource{}}},
 		{Name: "gcepd", VolumeSource: api.VolumeSource{GCEPersistentDisk: &api.GCEPersistentDiskVolumeSource{PDName: "my-PD", FSType: "ext4", Partition: 1, ReadOnly: false}}},
 		{Name: "awsebs", VolumeSource: api.VolumeSource{AWSElasticBlockStore: &api.AWSElasticBlockStoreVolumeSource{VolumeID: "my-PD", FSType: "ext4", Partition: 1, ReadOnly: false}}},
-		{Name: "gitrepo", VolumeSource: api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "my-repo", Revision: "hashstring"}}},
+		{Name: "gitrepo", VolumeSource: api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "my-repo", Revision: "hashstring", Directory: "target"}}},
+		{Name: "gitrepodot", VolumeSource: api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "my-repo", Directory: "."}}},
 		{Name: "iscsidisk", VolumeSource: api.VolumeSource{ISCSI: &api.ISCSIVolumeSource{TargetPortal: "127.0.0.1", IQN: "iqn.2015-02.example.com:test", Lun: 1, FSType: "ext4", ReadOnly: false}}},
 		{Name: "secret", VolumeSource: api.VolumeSource{Secret: &api.SecretVolumeSource{SecretName: "my-secret"}}},
 		{Name: "glusterfs", VolumeSource: api.VolumeSource{Glusterfs: &api.GlusterfsVolumeSource{EndpointsName: "host1", Path: "path", ReadOnly: false}}},
@@ -507,6 +508,10 @@ func TestValidateVolumes(t *testing.T) {
 	emptyMon := api.VolumeSource{RBD: &api.RBDVolumeSource{CephMonitors: []string{}, RBDImage: "bar", FSType: "ext4"}}
 	emptyImage := api.VolumeSource{RBD: &api.RBDVolumeSource{CephMonitors: []string{"foo"}, RBDImage: "", FSType: "ext4"}}
 	emptyCephFSMon := api.VolumeSource{CephFS: &api.CephFSVolumeSource{Monitors: []string{}}}
+	startsWithDots := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "..foo/bar"}}
+	containsDots := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "foo/../bar"}}
+	containsSpace := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "foo/ /bar"}}
+	absPath := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "/foo/bar"}}
 	emptyPathName := api.VolumeSource{DownwardAPI: &api.DownwardAPIVolumeSource{Items: []api.DownwardAPIVolumeFile{{Path: "",
 		FieldRef: api.ObjectFieldSelector{
 			APIVersion: "v1",
@@ -561,6 +566,11 @@ func TestValidateVolumes(t *testing.T) {
 		"empty wwn":                  {[]api.Volume{{Name: "badimage", VolumeSource: zeroWWN}}, errors.ValidationErrorTypeRequired, "[0].source.fc.targetWWNs", ""},
 		"empty lun":                  {[]api.Volume{{Name: "badimage", VolumeSource: emptyLun}}, errors.ValidationErrorTypeRequired, "[0].source.fc.lun", ""},
 		"slash in datasetName":       {[]api.Volume{{Name: "slashinname", VolumeSource: slashInName}}, errors.ValidationErrorTypeInvalid, "[0].source.flocker.datasetName", "must not contain '/'"},
+		"starts with '..'":           {[]api.Volume{{Name: "badprefix", VolumeSource: startsWithDots}}, errors.ValidationErrorTypeInvalid, "[0].source.gitRepo.directory", "must not start with \"..\""},
+		"contains '..'":              {[]api.Volume{{Name: "containsdots", VolumeSource: containsDots}}, errors.ValidationErrorTypeInvalid, "[0].source.gitRepo.directory", "must not contain \"..\""},
+		"contains space:":            {[]api.Volume{{Name: "containsspace", VolumeSource: containsSpace}}, errors.ValidationErrorTypeInvalid, "[0].source.gitRepo.directory", "must not contain spaces"},
+
+		"absolute target": {[]api.Volume{{Name: "absolutetarget", VolumeSource: absPath}}, errors.ValidationErrorTypeInvalid, "[0].source.gitRepo.directory", "must not be an absolute path"},
 	}
 	for k, v := range errorCases {
 		_, errs := validateVolumes(v.V)
