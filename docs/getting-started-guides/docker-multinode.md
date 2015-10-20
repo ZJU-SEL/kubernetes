@@ -189,7 +189,7 @@ You need to enable **customized master mode** before deploy:
 export MASTER_CONF=yes
 ```
 
-The configuration file of Master locates in `docker/kube-config/master-multi.json`, which will be mounted as volume for Master Pod to consume, you can modify it freely **before deploying**.
+The configuration file of Master locates in `cluster/images/hyperkube/master-multi.json`, which will be mounted as volume for Master Pod to consume, you can modify it freely **before deploying**.
 
 In this mode, you can even change the configuration of Master after the deployment has done, see:
 
