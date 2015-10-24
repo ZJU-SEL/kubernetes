@@ -64,6 +64,7 @@ import (
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/types"
 	"k8s.io/kubernetes/pkg/util"
+	"k8s.io/kubernetes/pkg/util/atomic"
 	"k8s.io/kubernetes/pkg/util/bandwidth"
 	"k8s.io/kubernetes/pkg/util/chmod"
 	"k8s.io/kubernetes/pkg/util/chown"
@@ -301,7 +302,7 @@ func NewMainKubelet(
 		podCIDR:                        podCIDR,
 		reconcileCIDR:                  reconcileCIDR,
 		pods:                           pods,
-		syncLoopMonitor:                util.AtomicValue{},
+		syncLoopMonitor:                atomic.Value{},
 		resolverConfig:                 resolverConfig,
 		cpuCFSQuota:                    cpuCFSQuota,
 		daemonEndpoints:                daemonEndpoints,
@@ -617,7 +618,7 @@ type Kubelet struct {
 	pods int
 
 	// Monitor Kubelet's sync loop
-	syncLoopMonitor util.AtomicValue
+	syncLoopMonitor atomic.Value
 
 	// Container restart Backoff
 	backOff *util.Backoff
