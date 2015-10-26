@@ -32,6 +32,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang/glog"
@@ -64,7 +65,6 @@ import (
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/types"
 	"k8s.io/kubernetes/pkg/util"
-	"k8s.io/kubernetes/pkg/util/atomic"
 	"k8s.io/kubernetes/pkg/util/bandwidth"
 	"k8s.io/kubernetes/pkg/util/chmod"
 	"k8s.io/kubernetes/pkg/util/chown"

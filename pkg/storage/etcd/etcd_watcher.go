@@ -18,6 +18,7 @@ package etcd
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"k8s.io/kubernetes/pkg/api/unversioned"
@@ -25,7 +26,6 @@ import (
 	"k8s.io/kubernetes/pkg/storage"
 	"k8s.io/kubernetes/pkg/tools"
 	"k8s.io/kubernetes/pkg/util"
-	"k8s.io/kubernetes/pkg/util/atomic"
 	"k8s.io/kubernetes/pkg/watch"
 
 	"github.com/coreos/go-etcd/etcd"
@@ -83,6 +83,23 @@ type etcdWatcher struct {
 
 // watchWaitDuration is the amount of time to wait for an error from watch.
 const watchWaitDuration = 100 * time.Millisecond
+
+// HighWaterMark is a thread-safe object for tracking the maximum value seen
+// for some quantity.
+type HighWaterMark int64
+
+// Check returns true if and only if 'current' is the highest value ever seen.
+func (hwm *HighWaterMark) Update(current int64) bool {
+	for {
+		old := atomic.LoadInt64((*int64)(hwm))
+		if current <= old {
+			return false
+		}
+		if atomic.CompareAndSwapInt64((*int64)(hwm), old, current) {
+			return true
+		}
+	}
+}
 
 // newEtcdWatcher returns a new etcdWatcher; if list is true, watch sub-nodes.  If you provide a transform
 // and a versioner, the versioner must be able to handle the objects that transform creates.
@@ -169,7 +186,7 @@ func convertRecursiveResponse(node *etcd.Node, response *etcd.Response, incoming
 }
 
 var (
-	watchChannelHWM atomic.HighWaterMark
+	watchChannelHWM HighWaterMark
 )
 
 // translate pulls stuff from etcd, converts, and pushes out the outgoing channel. Meant to be
