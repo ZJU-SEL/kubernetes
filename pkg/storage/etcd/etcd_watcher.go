@@ -196,7 +196,7 @@ func (w *etcdWatcher) translate() {
 			return
 		case res, ok := <-w.etcdIncoming:
 			if ok {
-				if curLen := int64(len(w.etcdIncoming)); watchChannelHWM.Check(curLen) {
+				if curLen := int64(len(w.etcdIncoming)); watchChannelHWM.Update(curLen) {
 					// Monitor if this gets backed up, and how much.
 					glog.V(2).Infof("watch: %v objects queued in channel.", curLen)
 				}
