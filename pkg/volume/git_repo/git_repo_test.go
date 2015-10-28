@@ -55,13 +55,19 @@ func TestCanSupport(t *testing.T) {
 	}
 }
 
-func testSetUp(plug volume.VolumePlugin, builder volume.Builder, t *testing.T) {
+type volSpec struct {
+	vol      *api.Volume
+	dir      string
+	cloneCmd []string
+}
+
+func testSetUp(spec volSpec, builder volume.Builder, t *testing.T) {
 	var fcmd exec.FakeCmd
 	fcmd = exec.FakeCmd{
 		CombinedOutputScript: []exec.FakeCombinedOutputAction{
 			// git clone
 			func() ([]byte, error) {
-				os.MkdirAll(path.Join(fcmd.Dirs[0], "kubernetes"), 0750)
+				os.MkdirAll(path.Join(fcmd.Dirs[0], spec.dir), 0750)
 				return []byte{}, nil
 			},
 			// git checkout
@@ -78,22 +84,14 @@ func testSetUp(plug volume.VolumePlugin, builder volume.Builder, t *testing.T) {
 		},
 	}
 	g := builder.(*gitRepoVolumeBuilder)
-
 	g.exec = &fake
 
 	err := g.SetUp()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-
-	cloneCmd := []string{"git", "clone", g.source}
-
-	if g.target != "" {
-		cloneCmd = append(cloneCmd, g.target)
-	}
-
 	expectedCmds := [][]string{
-		cloneCmd,
+		spec.cloneCmd,
 		{"git", "checkout", g.revision},
 		{"git", "reset", "--hard"},
 	}
@@ -103,24 +101,65 @@ func testSetUp(plug volume.VolumePlugin, builder volume.Builder, t *testing.T) {
 	if !reflect.DeepEqual(expectedCmds, fcmd.CombinedOutputLog) {
 		t.Errorf("unexpected commands: %v, expected: %v", fcmd.CombinedOutputLog, expectedCmds)
 	}
-
-	repoDir := ""
-	if g.target != "." {
-		repoDir = "/kubernetes"
-	}
-	expectedDirs := []string{g.GetPath(), g.GetPath() + repoDir, g.GetPath() + repoDir}
+	expectedDirs := []string{g.GetPath(), g.GetPath() + spec.dir, g.GetPath() + spec.dir}
 	if len(fcmd.Dirs) != 3 || !reflect.DeepEqual(expectedDirs, fcmd.Dirs) {
 		t.Errorf("unexpected directories: %v, expected: %v", fcmd.Dirs, expectedDirs)
 	}
 }
 
-func TestPlugin(t *testing.T) {
-	testPluginWithTarget("target_dir", t)
-	testPluginWithTarget("", t)
-	testPluginWithTarget(".", t)
+func TestPluginByTarget(t *testing.T) {
+	gitUrl := "https://github.com/GoogleCloudPlatform/kubernetes.git"
+	specs := []volSpec{
+		{
+			vol: &api.Volume{
+				Name: "vol1",
+				VolumeSource: api.VolumeSource{
+					GitRepo: &api.GitRepoVolumeSource{
+						Repository: gitUrl,
+						Revision:   "2a30ce65c5ab586b98916d83385c5983edd353a1",
+						Directory:  "target_dir",
+					},
+				},
+			},
+			dir:      "/target_dir",
+			cloneCmd: []string{"git", "clone", gitUrl, "target_dir"},
+		},
+		{
+			vol: &api.Volume{
+				Name: "vol1",
+				VolumeSource: api.VolumeSource{
+					GitRepo: &api.GitRepoVolumeSource{
+						Repository: gitUrl,
+						Revision:   "2a30ce65c5ab586b98916d83385c5983edd353a1",
+						Directory:  "",
+					},
+				},
+			},
+			dir:      "/kubernetes",
+			cloneCmd: []string{"git", "clone", gitUrl},
+		},
+		{
+			vol: &api.Volume{
+				Name: "vol1",
+				VolumeSource: api.VolumeSource{
+					GitRepo: &api.GitRepoVolumeSource{
+						Repository: gitUrl,
+						Revision:   "2a30ce65c5ab586b98916d83385c5983edd353a1",
+						Directory:  ".",
+					},
+				},
+			},
+			dir:      "",
+			cloneCmd: []string{"git", "clone", gitUrl, "."},
+		},
+	}
+
+	for _, spec := range specs {
+		testPluginByVolume(spec, t)
+	}
 }
 
-func testPluginWithTarget(targetDir string, t *testing.T) {
+func testPluginByVolume(spec volSpec, t *testing.T) {
 	plugMgr := volume.VolumePluginMgr{}
 	plugMgr.InitPlugins(ProbeVolumePlugins(), newTestHost(t))
 
@@ -128,18 +167,8 @@ func testPluginWithTarget(targetDir string, t *testing.T) {
 	if err != nil {
 		t.Errorf("Can't find the plugin by name")
 	}
-	spec := &api.Volume{
-		Name: "vol1",
-		VolumeSource: api.VolumeSource{
-			GitRepo: &api.GitRepoVolumeSource{
-				Repository: "https://github.com/GoogleCloudPlatform/kubernetes.git",
-				Revision:   "2a30ce65c5ab586b98916d83385c5983edd353a1",
-				Directory:  targetDir,
-			},
-		},
-	}
 	pod := &api.Pod{ObjectMeta: api.ObjectMeta{UID: types.UID("poduid")}}
-	builder, err := plug.NewBuilder(volume.NewSpecFromVolume(spec), pod, volume.VolumeOptions{RootContext: ""})
+	builder, err := plug.NewBuilder(volume.NewSpecFromVolume(spec.vol), pod, volume.VolumeOptions{RootContext: ""})
 
 	if err != nil {
 		t.Errorf("Failed to make a new Builder: %v", err)
@@ -153,7 +182,7 @@ func testPluginWithTarget(targetDir string, t *testing.T) {
 		t.Errorf("Got unexpected path: %s", path)
 	}
 
-	testSetUp(plug, builder, t)
+	testSetUp(spec, builder, t)
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			t.Errorf("SetUp() failed, volume path not created: %s", path)

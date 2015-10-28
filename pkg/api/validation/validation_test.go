@@ -508,10 +508,10 @@ func TestValidateVolumes(t *testing.T) {
 	emptyMon := api.VolumeSource{RBD: &api.RBDVolumeSource{CephMonitors: []string{}, RBDImage: "bar", FSType: "ext4"}}
 	emptyImage := api.VolumeSource{RBD: &api.RBDVolumeSource{CephMonitors: []string{"foo"}, RBDImage: "", FSType: "ext4"}}
 	emptyCephFSMon := api.VolumeSource{CephFS: &api.CephFSVolumeSource{Monitors: []string{}}}
-	startsWithDots := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "..foo/bar"}}
-	containsDots := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "foo/../bar"}}
-	containsSpace := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "foo/ /bar"}}
-	absPath := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "/foo/bar"}}
+	startsWithDots := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "..dots/bar"}}
+	containsDots := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "dots/../bar"}}
+	containsSpace := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "space/  /bar"}}
+	absPath := api.VolumeSource{GitRepo: &api.GitRepoVolumeSource{Repository: "foo", Directory: "/abstarget"}}
 	emptyPathName := api.VolumeSource{DownwardAPI: &api.DownwardAPIVolumeSource{Items: []api.DownwardAPIVolumeFile{{Path: "",
 		FieldRef: api.ObjectFieldSelector{
 			APIVersion: "v1",
@@ -560,17 +560,16 @@ func TestValidateVolumes(t *testing.T) {
 		"empty cephfs mon":           {[]api.Volume{{Name: "badmon", VolumeSource: emptyCephFSMon}}, errors.ValidationErrorTypeRequired, "[0].source.cephfs.monitors", ""},
 		"empty metatada path":        {[]api.Volume{{Name: "emptyname", VolumeSource: emptyPathName}}, errors.ValidationErrorTypeRequired, "[0].source.downwardApi.path", ""},
 		"absolute path":              {[]api.Volume{{Name: "absolutepath", VolumeSource: absolutePathName}}, errors.ValidationErrorTypeForbidden, "[0].source.downwardApi.path", ""},
-		"dot dot path":               {[]api.Volume{{Name: "dotdotpath", VolumeSource: dotDotInPath}}, errors.ValidationErrorTypeInvalid, "[0].source.downwardApi.path", "must not contain \"..\"."},
-		"dot dot file name":          {[]api.Volume{{Name: "dotdotfilename", VolumeSource: dotDotPathName}}, errors.ValidationErrorTypeInvalid, "[0].source.downwardApi.path", "must not start with \"..\"."},
-		"dot dot first level dirent": {[]api.Volume{{Name: "dotdotdirfilename", VolumeSource: dotDotFirstLevelDirent}}, errors.ValidationErrorTypeInvalid, "[0].source.downwardApi.path", "must not start with \"..\"."},
+		"dot dot path":               {[]api.Volume{{Name: "dotdotpath", VolumeSource: dotDotInPath}}, errors.ValidationErrorTypeInvalid, "[0].source.downwardApi.path", "must not contain \"..\""},
+		"dot dot file name":          {[]api.Volume{{Name: "dotdotfilename", VolumeSource: dotDotPathName}}, errors.ValidationErrorTypeInvalid, "[0].source.downwardApi.path", "must not start with \"..\""},
+		"dot dot first level dirent": {[]api.Volume{{Name: "dotdotdirfilename", VolumeSource: dotDotFirstLevelDirent}}, errors.ValidationErrorTypeInvalid, "[0].source.downwardApi.path", "must not start with \"..\""},
 		"empty wwn":                  {[]api.Volume{{Name: "badimage", VolumeSource: zeroWWN}}, errors.ValidationErrorTypeRequired, "[0].source.fc.targetWWNs", ""},
 		"empty lun":                  {[]api.Volume{{Name: "badimage", VolumeSource: emptyLun}}, errors.ValidationErrorTypeRequired, "[0].source.fc.lun", ""},
 		"slash in datasetName":       {[]api.Volume{{Name: "slashinname", VolumeSource: slashInName}}, errors.ValidationErrorTypeInvalid, "[0].source.flocker.datasetName", "must not contain '/'"},
 		"starts with '..'":           {[]api.Volume{{Name: "badprefix", VolumeSource: startsWithDots}}, errors.ValidationErrorTypeInvalid, "[0].source.gitRepo.directory", "must not start with \"..\""},
 		"contains '..'":              {[]api.Volume{{Name: "containsdots", VolumeSource: containsDots}}, errors.ValidationErrorTypeInvalid, "[0].source.gitRepo.directory", "must not contain \"..\""},
 		"contains space:":            {[]api.Volume{{Name: "containsspace", VolumeSource: containsSpace}}, errors.ValidationErrorTypeInvalid, "[0].source.gitRepo.directory", "must not contain spaces"},
-
-		"absolute target": {[]api.Volume{{Name: "absolutetarget", VolumeSource: absPath}}, errors.ValidationErrorTypeInvalid, "[0].source.gitRepo.directory", "must not be an absolute path"},
+		"absolute target":            {[]api.Volume{{Name: "absolutetarget", VolumeSource: absPath}}, errors.ValidationErrorTypeForbidden, "[0].source.gitRepo.directory", ""},
 	}
 	for k, v := range errorCases {
 		_, errs := validateVolumes(v.V)

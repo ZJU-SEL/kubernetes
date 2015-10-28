@@ -8740,10 +8740,12 @@ func (x *GitRepoVolumeSource) CodecEncodeSelf(e *codec1978.Encoder) {
 			var yyq639 [3]bool
 			_, _, _ = yysep639, yyq639, yy2arr639
 			const yyr639 bool = false
+			yyq639[1] = x.Revision != ""
+			yyq639[2] = x.Directory != ""
 			if yyr639 || yy2arr639 {
 				r.EncodeArrayStart(3)
 			} else {
-				var yynn639 int = 3
+				var yynn639 int = 1
 				for _, b := range yyq639 {
 					if b {
 						yynn639++
@@ -8768,35 +8770,47 @@ func (x *GitRepoVolumeSource) CodecEncodeSelf(e *codec1978.Encoder) {
 				}
 			}
 			if yyr639 || yy2arr639 {
-				yym644 := z.EncBinary()
-				_ = yym644
-				if false {
+				if yyq639[1] {
+					yym644 := z.EncBinary()
+					_ = yym644
+					if false {
+					} else {
+						r.EncodeString(codecSelferC_UTF81234, string(x.Revision))
+					}
 				} else {
-					r.EncodeString(codecSelferC_UTF81234, string(x.Revision))
+					r.EncodeString(codecSelferC_UTF81234, "")
 				}
 			} else {
-				r.EncodeString(codecSelferC_UTF81234, string("revision"))
-				yym645 := z.EncBinary()
-				_ = yym645
-				if false {
-				} else {
-					r.EncodeString(codecSelferC_UTF81234, string(x.Revision))
+				if yyq639[1] {
+					r.EncodeString(codecSelferC_UTF81234, string("revision"))
+					yym645 := z.EncBinary()
+					_ = yym645
+					if false {
+					} else {
+						r.EncodeString(codecSelferC_UTF81234, string(x.Revision))
+					}
 				}
 			}
 			if yyr639 || yy2arr639 {
-				yym647 := z.EncBinary()
-				_ = yym647
-				if false {
+				if yyq639[2] {
+					yym647 := z.EncBinary()
+					_ = yym647
+					if false {
+					} else {
+						r.EncodeString(codecSelferC_UTF81234, string(x.Directory))
+					}
 				} else {
-					r.EncodeString(codecSelferC_UTF81234, string(x.Directory))
+					r.EncodeString(codecSelferC_UTF81234, "")
 				}
 			} else {
-				r.EncodeString(codecSelferC_UTF81234, string("directory"))
-				yym648 := z.EncBinary()
-				_ = yym648
-				if false {
-				} else {
-					r.EncodeString(codecSelferC_UTF81234, string(x.Directory))
+				if yyq639[2] {
+					r.EncodeString(codecSelferC_UTF81234, string("directory"))
+					yym648 := z.EncBinary()
+					_ = yym648
+					if false {
+					} else {
+						r.EncodeString(codecSelferC_UTF81234, string(x.Directory))
+					}
 				}
 			}
 			if yysep639 {

@@ -3244,9 +3244,7 @@
     "id": "v1.GitRepoVolumeSource",
     "description": "GitRepoVolumeSource represents a volume that is pulled from git when the pod is created.",
     "required": [
-     "repository",
-     "revision",
-     "directory"
+     "repository"
     ],
     "properties": {
      "repository": {

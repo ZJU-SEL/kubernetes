@@ -673,9 +673,9 @@ type GitRepoVolumeSource struct {
 	// Repository URL
 	Repository string `json:"repository"`
 	// Commit hash for the specified revision.
-	Revision string `json:"revision, omitempty"`
+	Revision string `json:"revision,omitempty"`
 	// Target directory name
-	Directory string `json:"directory, omitempty"`
+	Directory string `json:"directory,omitempty"`
 }
 
 // SecretVolumeSource adapts a Secret into a VolumeSource.

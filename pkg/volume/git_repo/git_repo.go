@@ -151,12 +151,12 @@ func (b *gitRepoVolumeBuilder) SetUpAt(dir string) error {
 
 	args := []string{"clone", b.source}
 
-	if b.target != "" {
+	if len(b.target) != 0 {
 		args = append(args, b.target)
 	}
 	if output, err := b.execCommand("git", args, dir); err != nil {
 		return fmt.Errorf("failed to exec 'git %s': %s: %v",
-			strings.Join(append(args[:1], args[1:]...), " "), output, err)
+			strings.Join(args, " "), output, err)
 	}
 
 	files, err := ioutil.ReadDir(dir)
@@ -164,7 +164,7 @@ func (b *gitRepoVolumeBuilder) SetUpAt(dir string) error {
 		return err
 	}
 
-	if b.revision == "" {
+	if len(b.revision) == 0 {
 		// Done!
 		volumeutil.SetReady(b.getMetaDir())
 		return nil
