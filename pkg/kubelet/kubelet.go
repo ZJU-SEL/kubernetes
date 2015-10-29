@@ -64,6 +64,7 @@ import (
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/types"
 	"k8s.io/kubernetes/pkg/util"
+	"k8s.io/kubernetes/pkg/util/flow"
 	"k8s.io/kubernetes/pkg/util/bandwidth"
 	"k8s.io/kubernetes/pkg/util/chmod"
 	"k8s.io/kubernetes/pkg/util/chown"
@@ -321,7 +322,7 @@ func NewMainKubelet(
 	}
 
 	procFs := procfs.NewProcFs()
-	imageBackOff := util.NewBackOff(resyncInterval, MaxContainerBackOff)
+	imageBackOff := flow.NewBackOff(resyncInterval, MaxContainerBackOff)
 
 	readinessManager := proberesults.NewManager()
 	klet.livenessManager = proberesults.NewManagerWithUpdates()
@@ -449,7 +450,7 @@ func NewMainKubelet(
 		}
 	}
 
-	klet.backOff = util.NewBackOff(resyncInterval, MaxContainerBackOff)
+	klet.backOff = flow.NewBackOff(resyncInterval, MaxContainerBackOff)
 	klet.podKillingCh = make(chan *kubecontainer.Pod, podKillingChannelCapacity)
 
 	klet.sourcesSeen = sets.NewString()
@@ -622,7 +623,7 @@ type Kubelet struct {
 	syncLoopMonitor util.AtomicValue
 
 	// Container restart Backoff
-	backOff *util.Backoff
+	backOff *flow.Backoff
 
 	// Channel for sending pods to kill.
 	podKillingCh chan *kubecontainer.Pod

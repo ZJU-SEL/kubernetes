@@ -14,36 +14,36 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package flag
 
 import (
 	"fmt"
 	"strconv"
 )
 
-// BoolFlag is a boolean flag compatible with flags and pflags that keeps track of whether it had a value supplied or not.
+// Tristate is a boolean flag compatible with flags and pflags that keeps track of whether it had a value supplied or not.
 // Beware!  If you use this type, you must actually specify --flag-name=true, you cannot leave it as --flag-name and still have
 // the value set
-type BoolFlag struct {
+type Tristate struct {
 	// If Set has been invoked this value is true
 	provided bool
 	// The exact value provided on the flag
 	value bool
 }
 
-func (f *BoolFlag) Default(value bool) {
+func (f *Tristate) Default(value bool) {
 	f.value = value
 }
 
-func (f BoolFlag) String() string {
+func (f Tristate) String() string {
 	return fmt.Sprintf("%t", f.value)
 }
 
-func (f BoolFlag) Value() bool {
+func (f Tristate) Value() bool {
 	return f.value
 }
 
-func (f *BoolFlag) Set(value string) error {
+func (f *Tristate) Set(value string) error {
 	boolVal, err := strconv.ParseBool(value)
 	if err != nil {
 		return err
@@ -55,10 +55,10 @@ func (f *BoolFlag) Set(value string) error {
 	return nil
 }
 
-func (f BoolFlag) Provided() bool {
+func (f Tristate) Provided() bool {
 	return f.provided
 }
 
-func (f *BoolFlag) Type() string {
+func (f *Tristate) Type() string {
 	return "bool"
 }

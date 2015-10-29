@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package util
+package flow
 
 import "github.com/juju/ratelimit"
 
@@ -39,12 +39,6 @@ type tickRateLimiter struct {
 func NewTokenBucketRateLimiter(qps float32, burst int) RateLimiter {
 	limiter := ratelimit.NewBucketWithRate(float64(qps), int64(burst))
 	return &tickRateLimiter{limiter}
-}
-
-type fakeRateLimiter struct{}
-
-func NewFakeRateLimiter() RateLimiter {
-	return &fakeRateLimiter{}
 }
 
 func (t *tickRateLimiter) CanAccept() bool {
