@@ -57,8 +57,8 @@ cd "${tmpdir}"
 #
 # Due to GCS caching of public objects, it may take time for this to be widely
 # distributed.
-curl -L -O https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz > /dev/null 2>&1
-tar xzf easy-rsa.tar.gz > /dev/null 2>&1
+# curl -L -O https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz > /dev/null 2>&1
+tar xzf /home/vcap/easy-rsa.tar.gz > /dev/null 2>&1
 
 cd easy-rsa-master/easyrsa3
 ./easyrsa init-pki > /dev/null 2>&1

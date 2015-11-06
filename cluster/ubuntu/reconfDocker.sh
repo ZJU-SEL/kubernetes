@@ -67,6 +67,8 @@ function restart_docker {
   sudo service docker restart
 }
 
+echo "... Begin to install flannel and restart docker daemon"
+
 if [[ $1 == "i" ]]; then
   restart_docker
 elif [[ $1 == "ai" ]]; then

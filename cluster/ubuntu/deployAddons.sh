@@ -20,6 +20,7 @@ set -e
 
 KUBE_ROOT=$(dirname "${BASH_SOURCE}")/../..
 source "config-default.sh"
+export KUBECTL_PATH="${KUBE_ROOT}/cluster/ubuntu/binaries/kubectl"
 KUBECTL="${KUBE_ROOT}/cluster/kubectl.sh"
 
 function init {

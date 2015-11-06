@@ -137,7 +137,7 @@ function verify-cluster {
 
 function verify-master(){
   # verify master has all required daemons
-  printf "Validating master"
+  printf "Validating master $MASTER \n"
   local -a required_daemon=("kube-apiserver" "kube-controller-manager" "kube-scheduler")
   local validated="1"
   local try_count=1
@@ -164,7 +164,7 @@ function verify-master(){
 
 function verify-node(){
   # verify node has all required daemons
-  printf "Validating ${1}"
+  printf "Validating node ${1} \n"
   local -a required_daemon=("kube-proxy" "kubelet" "docker")
   local validated="1"
   local try_count=1
@@ -364,7 +364,7 @@ function provision-master() {
                             ${PROXY_SETTING} sudo -E ~/kube/make-ca-cert.sh ${MASTER_IP} IP:${MASTER_IP},IP:${SERVICE_CLUSTER_IP_RANGE%.*}.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local; \
                             sudo mkdir -p /opt/bin/ && sudo cp ~/kube/master/* /opt/bin/; \
                             sudo service etcd start; \
-                            sudo FLANNEL_NET=${FLANNEL_NET} -b ~/kube/reconfDocker.sh "a";"
+                            sudo FLANNEL_NET=${FLANNEL_NET} ~/kube/reconfDocker.sh "a";"
 }
 
 function provision-node() {
@@ -383,7 +383,7 @@ function provision-node() {
                          sudo -p '[sudo] password to start node: ' cp ~/kube/default/* /etc/default/ && sudo cp ~/kube/init_conf/* /etc/init/ && sudo cp ~/kube/init_scripts/* /etc/init.d/ \
                          && sudo mkdir -p /opt/bin/ && sudo cp ~/kube/minion/* /opt/bin; \
                          sudo service flanneld start; \
-                         sudo -b ~/kube/reconfDocker.sh "i";"
+                         sudo ~/kube/reconfDocker.sh "i";"
 }
 
 function provision-masterandnode() {
@@ -409,7 +409,7 @@ function provision-masterandnode() {
                             ${PROXY_SETTING} sudo -E ~/kube/make-ca-cert.sh ${MASTER_IP} IP:${MASTER_IP},IP:${SERVICE_CLUSTER_IP_RANGE%.*}.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:kubernetes.default.svc.cluster.local; \
                             sudo mkdir -p /opt/bin/ && sudo cp ~/kube/master/* /opt/bin/ && sudo cp ~/kube/minion/* /opt/bin/; \
                             sudo service etcd start; \
-                            sudo FLANNEL_NET=${FLANNEL_NET} -b ~/kube/reconfDocker.sh "ai";"
+                            sudo FLANNEL_NET=${FLANNEL_NET} ~/kube/reconfDocker.sh "ai";"
 }
 
 # Delete a kubernetes cluster

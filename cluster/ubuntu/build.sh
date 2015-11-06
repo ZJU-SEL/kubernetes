@@ -33,30 +33,30 @@ mkdir -p binaries/master
 mkdir -p binaries/minion
 
 # flannel
-FLANNEL_VERSION=${FLANNEL_VERSION:-"0.5.3"}
+FLANNEL_VERSION=${FLANNEL_VERSION:-"0.5.4"}
 echo "Prepare flannel ${FLANNEL_VERSION} release ..."
 if [ ! -f flannel.tar.gz ] ; then
-  curl -L  https://github.com/coreos/flannel/releases/download/v${FLANNEL_VERSION}/flannel-${FLANNEL_VERSION}-linux-amd64.tar.gz -o flannel.tar.gz
+  #curl -L  https://github.com/coreos/flannel/releases/download/v${FLANNEL_VERSION}/flannel-${FLANNEL_VERSION}-linux-amd64.tar.gz -o flannel.tar.gz
   tar xzf flannel.tar.gz
 fi
 cp flannel-${FLANNEL_VERSION}/flanneld binaries/master
 cp flannel-${FLANNEL_VERSION}/flanneld binaries/minion
 
 # ectd
-ETCD_VERSION=${ETCD_VERSION:-"2.0.12"}
+ETCD_VERSION=${ETCD_VERSION:-"2.2.1"}
 ETCD="etcd-v${ETCD_VERSION}-linux-amd64"
 echo "Prepare etcd ${ETCD_VERSION} release ..."
 if [ ! -f etcd.tar.gz ] ; then
-  curl -L https://github.com/coreos/etcd/releases/download/v${ETCD_VERSION}/${ETCD}.tar.gz -o etcd.tar.gz
+  #curl -L https://github.com/coreos/etcd/releases/download/v${ETCD_VERSION}/${ETCD}.tar.gz -o etcd.tar.gz
   tar xzf etcd.tar.gz
 fi
 cp $ETCD/etcd $ETCD/etcdctl binaries/master
 
 # k8s
-KUBE_VERSION=${KUBE_VERSION:-"1.0.6"}
+KUBE_VERSION=${KUBE_VERSION:-"1.0.7"}
 echo "Prepare kubernetes ${KUBE_VERSION} release ..."
 if [ ! -f kubernetes.tar.gz ] ; then
-  curl -L https://github.com/GoogleCloudPlatform/kubernetes/releases/download/v${KUBE_VERSION}/kubernetes.tar.gz -o kubernetes.tar.gz
+  #curl -L https://github.com/GoogleCloudPlatform/kubernetes/releases/download/v${KUBE_VERSION}/kubernetes.tar.gz -o kubernetes.tar.gz
   tar xzf kubernetes.tar.gz
 fi
 pushd kubernetes/server

@@ -18,16 +18,16 @@
 
 # Define all your cluster nodes, MASTER node comes first"
 # And separated with blank space like <user_1@ip_1> <user_2@ip_2> <user_3@ip_3> 
-export nodes=${nodes:-"vcap@10.10.103.250 vcap@10.10.103.162 vcap@10.10.103.223"}
+export nodes=${nodes:-"vcap@10.10.102.153 vcap@10.10.102.151"}
 
 # Define all your nodes role: a(master) or i(minion) or ai(both master and minion), must be the order same 
-role=${role:-"ai i i"}
+role=${role:-"ai i"}
 # If it practically impossible to set an array as an environment variable
 # from a script, so assume variable is a string then convert it to an array
 export roles=($role)
 
 # Define minion numbers
-export NUM_MINIONS=${NUM_MINIONS:-3}
+export NUM_MINIONS=${NUM_MINIONS:-2}
 # define the IP range used for service cluster IPs.
 # according to rfc 1918 ref: https://tools.ietf.org/html/rfc1918 choose a private ip range here.
 export SERVICE_CLUSTER_IP_RANGE=${SERVICE_CLUSTER_IP_RANGE:-192.168.3.0/24}  # formerly PORTAL_NET
@@ -62,7 +62,7 @@ DNS_DOMAIN=${DNS_DOMAIN:-"cluster.local"}
 DNS_REPLICAS=${DNS_REPLICAS:-1}
 
 # Optional: Install Kubernetes UI
-ENABLE_CLUSTER_UI="${KUBE_ENABLE_CLUSTER_UI:-true}"
+ENABLE_CLUSTER_UI="${KUBE_ENABLE_CLUSTER_UI:-false}"
 
 # Optional: Enable setting flags for kube-apiserver to turn on behavior in active-dev
 #RUNTIME_CONFIG=""
