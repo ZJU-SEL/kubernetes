@@ -472,6 +472,11 @@ func ChooseHostInterface() (net.IP, error) {
 	return chooseHostInterfaceFromRoute(inFile, nw)
 }
 
+func GetHostIpFromInterface(intfName string) (net.IP, error) {
+	var nw networkInterfacer = networkInterface{}
+	return getIPFromInterface(intfName, nw)
+}
+
 type networkInterfacer interface {
 	InterfaceByName(intfName string) (*net.Interface, error)
 	Addrs(intf *net.Interface) ([]net.Addr, error)
