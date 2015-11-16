@@ -20,9 +20,6 @@ set -e
 
 source ~/docker/kube-deploy/common.sh
 
-# REGISTER_MASTER_KUBELET set in util.sh & passed here as $1
-REGISTER_MASTER_KUBELET=$1
-
 # Start k8s components in containers
 function start_k8s(){
     
@@ -53,7 +50,7 @@ function start_k8s(){
         MASTER_CONF=""
     fi
 
-    # if REGISTER_MASTER_KUBELET is set from $1, deploy this machine as "both master & node"
+    # if REGISTER_MASTER_KUBELET is set to 'yes', deploy this machine as "both master & node"
     if [[ "yes" == $REGISTER_MASTER_KUBELET ]]; then
         # This machine will register itself to this local master
         REGISTER_MASTER_KUBELET="--api-servers=http://localhost:8080"

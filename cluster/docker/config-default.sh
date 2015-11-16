@@ -17,8 +17,9 @@
 ## Contains configuration values for the bare-metal cluster
 
 # (0) Versions
-export ETCD_VERSION=${ETCD_VERSION:-"2.0.12"}
-export K8S_VERSION=${K8S_VERSION:-"1.0.3"}
+# TODO(harryz) can these versions moved to kube-up.sh or some place unified?
+export ETCD_VERSION=${ETCD_VERSION:-"2.2.1"}
+export K8S_VERSION=${K8S_VERSION:-"1.1.1"}
 
 # (1) Cluster topology
 # And separated with blank space:

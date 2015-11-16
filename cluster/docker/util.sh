@@ -71,39 +71,41 @@ function validate-cluster {
 # Vars set:
 #   KUBE_ROOT
 #   NUM_MINIONS
+#   REGISTER_MASTER_KUBELET
 function kube-up() {
+
+  NUM_MINIONS=0
+  REGISTER_MASTER_KUBELET=""
+
+  # Determine if there's any Node want to register itself as Master
+  for node in $NODES
+  do
+    {
+      if [ "$node" == $MASTER ]; then
+        echo "... NOTICE: $node will be deployed as both Master and Node"
+        REGISTER_MASTER_KUBELET="yes"
+      fi
+    }
+  done
+
   # Generate ENVs used to deploy master and nodes
   generate_env
 
-  NUM_MINIONS=0
+  # Deploy Master separately
+  if [[ "yes" != $NODE_ONLY ]]; then
+    deploy-node-master
+  fi
  
+  # Deploy all the Nodes
   for node in $NODES
   do
     {
       if [ "$node" != $MASTER ]; then
         deploy-node ${node#*@}
-      else
-        # This machine occurs both in NODES & MASTER, we
-        # should deploy it as a "master & node"
-        #
-        # NODE_ONLY=yes means that we only want to join existing master
-        if [[ "yes" != $NODE_ONLY ]]; then
-          REGISTER_MASTER_KUBELET="yes"
-          deploy-node-master 
-        fi
       fi
       NUM_MINIONS=$((NUM_MINIONS+1))
     }
   done
-
-  # Need to deploy master separately only when:
-  # 1. not in NODE_ONLY mode
-  # 2. master is not deployed during the loop above
-  if [[ "yes" != $NODE_ONLY && "yes" != $REGISTER_MASTER_KUBELET ]]; then
-    deploy-node-master
-  fi
-
-  wait
 
   export NUM_MINIONS=$NUM_MINIONS
 
@@ -126,12 +128,13 @@ export NONDE_ONLY=$NODE_ONLY
 export MASTER=$MASTER
 export MASTER_IP=$MASTER_IP
 export MASTER_CONF=$MASTER_CONF
+export REGISTER_MASTER_KUBELET=$REGISTER_MASTER_KUBELET
 export SSH_OPTS="$SSH_OPTS"
 export FLANNEL_NET=$FLANNEL_NET
 EOF
   cat ${KUBE_ROOT}/cluster/docker/kube-config/node.env
 
-  read -p "Are you sure? (y|n) " -n 1 -r
+  read -p "Are you sure to continue? (y|n) " -n 1 -r
   echo
   if [[ ! $REPLY =~ ^[Yy]$ ]]
   then

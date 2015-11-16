@@ -28,9 +28,12 @@ function clear_old_bootstrap {
         kill -9 $PID
         
         echo "... Clearing bootstrap dir"
+        # Clean all the bootstrap images
+        docker -H unix:///var/run/docker-bootstrap.sock rmi \
+        `docker -H unix:///var/run/docker-bootstrap.sock images -q` || true
         # Have to warn user some dirs may be left
         rm -rf /var/lib/docker-bootstrap || true; \
-        echo "Warning: Some directories can not be deleted, you need to clear them mannually"
+        echo "Warning: Some directories can not be deleted, you need to clear them manually"
     fi
 }
 
