@@ -45,11 +45,13 @@ interested in just starting to explore Kubernetes, we recommend that you start t
 - [Overview](#overview)
   - [Bootstrap Docker](#bootstrap-docker)
 - [Start a Cluster](#start-a-cluster)
-    - [Add another Node into cluster](#add-another-node-into-cluster)
-    - [Support different infrastructures](#support-different-infrastructures)
-- [Start a Single Node Cluster](#start-a-single-node-cluster)
 - [Test it out](#test-it-out)
+- [Advanced Guide](#advanced-guide)
+  - [Add another Node into cluster](#add-another-node-into-cluster)
+  - [Support different infrastructures](#support-different-infrastructures)
+  - [Start a Single Node Cluster](#start-a-single-node-cluster)
 - [Deploy a DNS](#deploy-a-dns)
+  - [Customize DNS of the cluster](#customize-dns-of-the-cluster)
 - [Customize](#customize)
 - [Tear Down](#tear-down)
 - [Trouble shooting](#trouble-shooting)
@@ -105,7 +107,7 @@ export KUBERNETES_PROVIDER=docker
 ./kube-up.sh
 ```
 
-> Please check `cluster/docker/config-default.sh` for more supported ENVs
+> Please check `cluster/docker/config-default.sh` for more supported ENVs and default values.
 
 If all things goes right, you will see the below message from console indicating the k8s is up.
 
@@ -115,26 +117,47 @@ Deploy Complete!
 ... Everything is OK! 
 ```
 
+## Test it out
+
+On every node, you can see there are two containers running by `docker ps`:
+
+```console
+kube_in_docker_proxy_xxx
+kube_in_docker_kubelet_xxx
+```
+
+And on Master node, you can see extra master containers running:
+
+```console
+k8s_scheduler.xxx
+k8s_apiserver.xxx
+k8s_controller-manager.xxx
+```
+
+In `cluster` directory, use `$ ./kubectl.sh get nodes` to see if all of your nodes are ready.
+
+```console
+$ ./kubectl.sh get nodes
+NAME            LABELS                                 STATUS
+10.10.102.150   kubernetes.io/hostname=10.10.103.150   Ready
+10.10.102.153   kubernetes.io/hostname=10.10.102.153   Ready
+```
+
+Then you can run Kubernetes [guest-example](../../examples/guestbook/) to build a Redis backend cluster on the k8s．
+
+## Advanced Guide
+
+Here are some tips for anyone interested in customize or play more with this guide.
+
 ### Add another Node into cluster
 
-Adding a Node to existing cluster is quite easy, just set `NODE_ONLY` to clarify you want to provision Node only:
+Adding a Node to existing cluster is quite easy, just enable `NODE_ONLY` mode to clarify you want to provision Node only:
 
 ```sh
 export NODE_ONLY=yes
 export NODES="vcap@10.10.102.153"
 export MASTER="vcap@10.10.102.150"
 ```
-
-### Deploy a Single Node Cluster
-
-Just set your MASTER and NODES to the same machine: 
-
-| IP Address  |   Role   |
-|-------------|----------|
-|10.10.102.150|   node   |
-|10.10.102.150|  master  |
-
-> NOTE: We do not recommend deploy a machine as both Master and Node unless you are lack of machines, because e2e test may complain.
 
 ### Support different infrastructures
 
@@ -155,39 +178,48 @@ export INFRA=gce
 
 Only a few functions need to be rewrite, so welcome to contribute!
 
-## Test it out
 
-On every node, you can see there are two containers running by `docker ps`:
+### Deploy a Single Node Cluster
 
-```console
-kube_in_docker_proxy_xxx
-kube_in_docker_kubelet_xxx
+Just set your MASTER and NODES to the same machine: 
+
+| IP Address  |   Role   |
+|-------------|----------|
+|10.10.102.150|   node   |
+|10.10.102.150|  master  |
+
+> NOTE: We do not recommend deploy a machine as both Master and Node unless you are lack of machines, because e2e test may complain.
+
+
+
+## Deploy a DNS
+
+The DNS ENVs are also defined in `cluster/docker/config-default.sh`. You do not need change anything by default.
+
+```sh
+$ cd cluster/docker
+$ KUBERNETES_PROVIDER=docker ./deployAddons.sh
 ```
 
-And on Master node, you can see extra master containers running:
+After that, you can use `$ ./kubectl get pods --namespace=kube-system` to see the DNS pods are running in the cluster.
 
-```console
-k8s_scheduler.xxx
-k8s_apiserver.xxx
-k8s_controller-manager.xxx
+
+#### Customize DNS of the cluster
+You can customize your cluster DNS **before deployment**:
+
+```sh
+$ export DNS_SERVER_IP=<your-own-valid-ip>
+$ export DNS_DOMAIN=<your-own-dns-name>
 ```
+Otherwise, you need to re-deploy the cluster in `NODE_ONLY` mode after you changed those two ENVs.
 
-As we use `hyperkube` image to run k8s, we **do not** need to compile binaries, please download and extract `kubectl` binary from [releases page](https://github.com/kubernetes/kubernetes/releases).
+And then:
 
-At last, use `$ kubectl get nodes` to see if all of your nodes are ready.
-
-```console
-$ kubectl get nodes
-NAME            LABELS                                 STATUS
-10.10.102.150   kubernetes.io/hostname=10.10.103.150   Ready
-10.10.102.153   kubernetes.io/hostname=10.10.102.153   Ready
+```sh
+$ export DNS_REPLICAS=<your-own-number>
+$ cd cluster/docker
+$ KUBERNETES_PROVIDER=docker ./deployAddons.sh
 ```
-
-### Deploy a DNS
-
-See [here](docker-multinode/deployDNS.md) for instructions.
-
-Then you can run Kubernetes [guest-example](../../examples/guestbook/) to build a Redis backend cluster on the k8s．
 
 ## Customize
 

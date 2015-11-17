@@ -47,6 +47,12 @@ export SSH_OPTS=${SSH_OPTS:-"-oStrictHostKeyChecking=no -oUserKnownHostsFile=/de
 
 # (3) Networking
 export FLANNEL_VERSION=${FLANNEL_VERSION:-"0.5.3"}
-# Define the IP range used for flannel overlay network, should not conflict with SERVICE_CLUSTER_IP_RANGE
+# Define the IP range used for flannel overlay network
+# Should not conflict with --service-cluster-ip-range (10.0.0.1/24 by default)
 export FLANNEL_NET=${FLANNEL_NET:-10.16.0.0/16}
 
+# (4) DNS addon
+# DNS_SERVER_IP must be a IP in --service-cluster-ip-range (10.0.0.1/24 by default)
+export DNS_SERVER_IP=${DNS_SERVER_IP:-"10.0.0.10"}
+export DNS_DOMAIN=${DNS_DOMAIN:-"cluster.local"}
+export DNS_REPLICAS=${DNS_REPLICAS:-1}

@@ -39,6 +39,8 @@ function start_k8s() {
         gcr.io/google_containers/hyperkube:v$K8S_VERSION \
         /hyperkube kubelet --containerized \
         --api-servers=http://$MASTER_IP:8080 \
+        --cluster-dns=$DNS_SERVER_IP \
+        --cluster-domain=$DNS_DOMAIN \
         $KUBELET_OPTS
 
     docker run -d --net=host --restart=always --privileged \
