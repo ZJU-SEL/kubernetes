@@ -17,6 +17,7 @@ limitations under the License.
 package git_repo
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -55,156 +56,356 @@ func TestCanSupport(t *testing.T) {
 	}
 }
 
-type volSpec struct {
-	vol      *api.Volume
-	dir      string
-	cloneCmd []string
+// Expected command
+type expectedCommand struct {
+	// The git command
+	cmd []string
+	// The dir of git command is executed
+	dir string
 }
 
-func testSetUp(spec volSpec, builder volume.Builder, t *testing.T) {
-	var fcmd exec.FakeCmd
-	fcmd = exec.FakeCmd{
-		CombinedOutputScript: []exec.FakeCombinedOutputAction{
-			// git clone
-			func() ([]byte, error) {
-				os.MkdirAll(path.Join(fcmd.Dirs[0], spec.dir), 0750)
-				return []byte{}, nil
-			},
-			// git checkout
-			func() ([]byte, error) { return []byte{}, nil },
-			// git reset
-			func() ([]byte, error) { return []byte{}, nil },
-		},
-	}
-	fake := exec.FakeExec{
-		CommandScript: []exec.FakeCommandAction{
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-			func(cmd string, args ...string) exec.Cmd { return exec.InitFakeCmd(&fcmd, cmd, args...) },
-		},
-	}
-	g := builder.(*gitRepoVolumeBuilder)
-	g.exec = &fake
-
-	err := g.SetUp()
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-	expectedCmds := [][]string{
-		spec.cloneCmd,
-		{"git", "checkout", g.revision},
-		{"git", "reset", "--hard"},
-	}
-	if fake.CommandCalls != len(expectedCmds) {
-		t.Errorf("unexpected command calls: expected 3, saw: %d", fake.CommandCalls)
-	}
-	if !reflect.DeepEqual(expectedCmds, fcmd.CombinedOutputLog) {
-		t.Errorf("unexpected commands: %v, expected: %v", fcmd.CombinedOutputLog, expectedCmds)
-	}
-	expectedDirs := []string{g.GetPath(), g.GetPath() + spec.dir, g.GetPath() + spec.dir}
-	if len(fcmd.Dirs) != 3 || !reflect.DeepEqual(expectedDirs, fcmd.Dirs) {
-		t.Errorf("unexpected directories: %v, expected: %v", fcmd.Dirs, expectedDirs)
-	}
-}
-
-func TestPluginByTarget(t *testing.T) {
+func TestPlugin(t *testing.T) {
 	gitUrl := "https://github.com/GoogleCloudPlatform/kubernetes.git"
-	specs := []volSpec{
+	revision := "2a30ce65c5ab586b98916d83385c5983edd353a1"
+
+	scenarios := []struct {
+		name              string
+		vol               *api.Volume
+		expecteds         []expectedCommand
+		isExpectedFailure bool
+	}{
 		{
+			name: "target-dir",
 			vol: &api.Volume{
 				Name: "vol1",
 				VolumeSource: api.VolumeSource{
 					GitRepo: &api.GitRepoVolumeSource{
 						Repository: gitUrl,
-						Revision:   "2a30ce65c5ab586b98916d83385c5983edd353a1",
+						Revision:   revision,
 						Directory:  "target_dir",
 					},
 				},
 			},
-			dir:      "/target_dir",
-			cloneCmd: []string{"git", "clone", gitUrl, "target_dir"},
+			expecteds: []expectedCommand{
+				{
+					cmd: []string{"git", "clone", gitUrl, "target_dir"},
+					dir: "",
+				},
+				{
+					cmd: []string{"git", "checkout", revision},
+					dir: "/target_dir",
+				},
+				{
+					cmd: []string{"git", "reset", "--hard"},
+					dir: "/target_dir",
+				},
+			},
+			isExpectedFailure: false,
 		},
 		{
+			name: "target-dir-no-revision",
 			vol: &api.Volume{
 				Name: "vol1",
 				VolumeSource: api.VolumeSource{
 					GitRepo: &api.GitRepoVolumeSource{
 						Repository: gitUrl,
-						Revision:   "2a30ce65c5ab586b98916d83385c5983edd353a1",
+						Directory:  "target_dir",
+					},
+				},
+			},
+			expecteds: []expectedCommand{
+				{
+					cmd: []string{"git", "clone", gitUrl, "target_dir"},
+					dir: "",
+				},
+			},
+			isExpectedFailure: false,
+		},
+		{
+			name: "only-git-clone",
+			vol: &api.Volume{
+				Name: "vol1",
+				VolumeSource: api.VolumeSource{
+					GitRepo: &api.GitRepoVolumeSource{
+						Repository: gitUrl,
+					},
+				},
+			},
+			expecteds: []expectedCommand{
+				{
+					cmd: []string{"git", "clone", gitUrl},
+					dir: "",
+				},
+			},
+			isExpectedFailure: false,
+		},
+		{
+			name: "no-target-dir",
+			vol: &api.Volume{
+				Name: "vol1",
+				VolumeSource: api.VolumeSource{
+					GitRepo: &api.GitRepoVolumeSource{
+						Repository: gitUrl,
+						Revision:   revision,
 						Directory:  "",
 					},
 				},
 			},
-			dir:      "/kubernetes",
-			cloneCmd: []string{"git", "clone", gitUrl},
+			expecteds: []expectedCommand{
+				{
+					cmd: []string{"git", "clone", gitUrl},
+					dir: "",
+				},
+				{
+					cmd: []string{"git", "checkout", revision},
+					dir: "/kubernetes",
+				},
+				{
+					cmd: []string{"git", "reset", "--hard"},
+					dir: "/kubernetes",
+				},
+			},
+			isExpectedFailure: false,
 		},
 		{
+			name: "current-dir",
 			vol: &api.Volume{
 				Name: "vol1",
 				VolumeSource: api.VolumeSource{
 					GitRepo: &api.GitRepoVolumeSource{
 						Repository: gitUrl,
-						Revision:   "2a30ce65c5ab586b98916d83385c5983edd353a1",
+						Revision:   revision,
 						Directory:  ".",
 					},
 				},
 			},
-			dir:      "",
-			cloneCmd: []string{"git", "clone", gitUrl, "."},
+			expecteds: []expectedCommand{
+				{
+					cmd: []string{"git", "clone", gitUrl, "."},
+					dir: "",
+				},
+				{
+					cmd: []string{"git", "checkout", revision},
+					dir: "",
+				},
+				{
+					cmd: []string{"git", "reset", "--hard"},
+					dir: "",
+				},
+			},
+			isExpectedFailure: false,
+		},
+		{
+			name: "invalid-dir",
+			vol: &api.Volume{
+				Name: "vol1",
+				VolumeSource: api.VolumeSource{
+					GitRepo: &api.GitRepoVolumeSource{
+						Repository: gitUrl,
+						Revision:   revision,
+						Directory:  ".",
+					},
+				},
+			},
+			expecteds: []expectedCommand{
+				{
+					cmd: []string{"git", "clone", gitUrl, "."},
+					dir: "",
+				},
+				{
+					cmd: []string{"git", "checkout", revision},
+					dir: "target_dir",
+				},
+				{
+					cmd: []string{"git", "reset", "--hard"},
+					dir: "target_dir",
+				},
+			},
+			isExpectedFailure: true,
+		},
+		{
+			name: "invalid-expecteds",
+			vol: &api.Volume{
+				Name: "vol1",
+				VolumeSource: api.VolumeSource{
+					GitRepo: &api.GitRepoVolumeSource{
+						Repository: gitUrl,
+						Revision:   revision,
+						Directory:  "target_dir",
+					},
+				},
+			},
+			expecteds: []expectedCommand{
+				{
+					cmd: []string{"git", "clone", gitUrl},
+					dir: "",
+				},
+			},
+			isExpectedFailure: true,
 		},
 	}
 
-	for _, spec := range specs {
-		testPluginByVolume(spec, t)
+	for _, scenario := range scenarios {
+		allErrs := doTestPlugin(scenario, t)
+		if len(allErrs) == 0 && scenario.isExpectedFailure {
+			t.Errorf("Unexpected success for scenario: %s", scenario.name)
+		}
+		if len(allErrs) > 0 && !scenario.isExpectedFailure {
+			t.Errorf("Unexpected failure for scenario: %s - %+v", scenario.name, allErrs)
+		}
 	}
+
 }
 
-func testPluginByVolume(spec volSpec, t *testing.T) {
+func doTestPlugin(scenario struct {
+	name              string
+	vol               *api.Volume
+	expecteds         []expectedCommand
+	isExpectedFailure bool
+}, t *testing.T) []error {
+	allErrs := []error{}
+
 	plugMgr := volume.VolumePluginMgr{}
 	plugMgr.InitPlugins(ProbeVolumePlugins(), newTestHost(t))
 
 	plug, err := plugMgr.FindPluginByName("kubernetes.io/git-repo")
 	if err != nil {
-		t.Errorf("Can't find the plugin by name")
+		allErrs = append(allErrs,
+			fmt.Errorf("Can't find the plugin by name"))
+		return allErrs
 	}
 	pod := &api.Pod{ObjectMeta: api.ObjectMeta{UID: types.UID("poduid")}}
-	builder, err := plug.NewBuilder(volume.NewSpecFromVolume(spec.vol), pod, volume.VolumeOptions{RootContext: ""})
+	builder, err := plug.NewBuilder(volume.NewSpecFromVolume(scenario.vol), pod, volume.VolumeOptions{RootContext: ""})
 
 	if err != nil {
-		t.Errorf("Failed to make a new Builder: %v", err)
+		allErrs = append(allErrs,
+			fmt.Errorf("Failed to make a new Builder: %v", err))
+		return allErrs
 	}
 	if builder == nil {
-		t.Errorf("Got a nil Builder")
+		allErrs = append(allErrs,
+			fmt.Errorf("Got a nil Builder"))
+		return allErrs
 	}
 
 	path := builder.GetPath()
 	if !strings.HasSuffix(path, "pods/poduid/volumes/kubernetes.io~git-repo/vol1") {
-		t.Errorf("Got unexpected path: %s", path)
+		allErrs = append(allErrs,
+			fmt.Errorf("Got unexpected path: %s", path))
+		return allErrs
 	}
 
-	testSetUp(spec, builder, t)
+	// Test setUp()
+	setUpErrs := doTestSetUp(scenario, builder)
+	allErrs = append(allErrs, setUpErrs...)
+
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
-			t.Errorf("SetUp() failed, volume path not created: %s", path)
+			allErrs = append(allErrs,
+				fmt.Errorf("SetUp() failed, volume path not created: %s", path))
+			return allErrs
 		} else {
-			t.Errorf("SetUp() failed: %v", err)
+			allErrs = append(allErrs,
+				fmt.Errorf("SetUp() failed: %v", err))
+			return allErrs
 		}
 	}
 
 	cleaner, err := plug.NewCleaner("vol1", types.UID("poduid"))
 	if err != nil {
-		t.Errorf("Failed to make a new Cleaner: %v", err)
+		allErrs = append(allErrs,
+			fmt.Errorf("Failed to make a new Cleaner: %v", err))
+		return allErrs
 	}
 	if cleaner == nil {
-		t.Errorf("Got a nil Cleaner")
+		allErrs = append(allErrs,
+			fmt.Errorf("Got a nil Cleaner"))
+		return allErrs
 	}
 
 	if err := cleaner.TearDown(); err != nil {
-		t.Errorf("Expected success, got: %v", err)
+		allErrs = append(allErrs,
+			fmt.Errorf("Expected success, got: %v", err))
+		return allErrs
 	}
 	if _, err := os.Stat(path); err == nil {
-		t.Errorf("TearDown() failed, volume path still exists: %s", path)
+		allErrs = append(allErrs,
+			fmt.Errorf("TearDown() failed, volume path still exists: %s", path))
 	} else if !os.IsNotExist(err) {
-		t.Errorf("SetUp() failed: %v", err)
+		allErrs = append(allErrs,
+			fmt.Errorf("SetUp() failed: %v", err))
 	}
+	return allErrs
+}
+
+func doTestSetUp(scenario struct {
+	name              string
+	vol               *api.Volume
+	expecteds         []expectedCommand
+	isExpectedFailure bool
+}, builder volume.Builder) []error {
+	expecteds := scenario.expecteds
+	allErrs := []error{}
+
+	// Construct combined outputs from expected commands
+	var fakeOutputs []exec.FakeCombinedOutputAction
+	var fcmd exec.FakeCmd
+	for _, expected := range expecteds {
+		if expected.cmd[1] == "clone" {
+			fakeOutputs = append(fakeOutputs, func() ([]byte, error) {
+				// git clone, it creates new dir/files
+				os.MkdirAll(path.Join(fcmd.Dirs[0], expected.dir), 0750)
+				return []byte{}, nil
+			})
+		} else {
+			// git checkout || git reset, they create nothing
+			fakeOutputs = append(fakeOutputs, func() ([]byte, error) {
+				return []byte{}, nil
+			})
+		}
+	}
+	fcmd = exec.FakeCmd{
+		CombinedOutputScript: fakeOutputs,
+	}
+
+	// Construct fake exec outputs from fcmd
+	var fackeAction []exec.FakeCommandAction
+	for i := 0; i < len(expecteds); i++ {
+		fackeAction = append(fackeAction, func(cmd string, args ...string) exec.Cmd {
+			return exec.InitFakeCmd(&fcmd, cmd, args...)
+		})
+
+	}
+	fake := exec.FakeExec{
+		CommandScript: fackeAction,
+	}
+
+	g := builder.(*gitRepoVolumeBuilder)
+	g.exec = &fake
+
+	g.SetUp()
+
+	if fake.CommandCalls != len(expecteds) {
+		allErrs = append(allErrs,
+			fmt.Errorf("unexpected command calls in scenario: expected %d, saw: %d", len(expecteds), fake.CommandCalls))
+	}
+	var expectedCmds [][]string
+	for _, expected := range expecteds {
+		expectedCmds = append(expectedCmds, expected.cmd)
+	}
+	if !reflect.DeepEqual(expectedCmds, fcmd.CombinedOutputLog) {
+		allErrs = append(allErrs,
+			fmt.Errorf("unexpected commands: %v, expected: %v", fcmd.CombinedOutputLog, expectedCmds))
+	}
+
+	var expectedPaths []string
+	for _, expected := range expecteds {
+		expectedPaths = append(expectedPaths, g.GetPath()+expected.dir)
+	}
+	if len(fcmd.Dirs) != len(expectedPaths) || !reflect.DeepEqual(expectedPaths, fcmd.Dirs) {
+		allErrs = append(allErrs,
+			fmt.Errorf("unexpected directories: %v, expected: %v", fcmd.Dirs, expectedPaths))
+	}
+
+	return allErrs
 }

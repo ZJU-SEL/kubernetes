@@ -320,7 +320,7 @@ func ValidateObjectMetaUpdate(new, old *api.ObjectMeta) errs.ValidationErrorList
 	}
 
 	// Reject updates that don't specify a resource version
-	if len(new.ResourceVersion) == 0 {
+	if new.ResourceVersion == "" {
 		allErrs = append(allErrs, errs.NewFieldInvalid("resourceVersion", new.ResourceVersion, "resourceVersion must be specified for an update"))
 	}
 
@@ -433,7 +433,7 @@ func validateSource(source *api.VolumeSource) errs.ValidationErrorList {
 
 func validateHostPathVolumeSource(hostPath *api.HostPathVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(hostPath.Path) == 0 {
+	if hostPath.Path == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("path"))
 	}
 	return allErrs
@@ -453,13 +453,13 @@ func validateGitRepoVolumeSource(gitRepo *api.GitRepoVolumeSource) errs.Validati
 
 func validateISCSIVolumeSource(iscsi *api.ISCSIVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(iscsi.TargetPortal) == 0 {
+	if iscsi.TargetPortal == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("targetPortal"))
 	}
-	if len(iscsi.IQN) == 0 {
+	if iscsi.IQN == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("iqn"))
 	}
-	if len(iscsi.FSType) == 0 {
+	if iscsi.FSType == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("fsType"))
 	}
 	if iscsi.Lun < 0 || iscsi.Lun > 255 {
@@ -473,7 +473,7 @@ func validateFCVolumeSource(fc *api.FCVolumeSource) errs.ValidationErrorList {
 	if len(fc.TargetWWNs) < 1 {
 		allErrs = append(allErrs, errs.NewFieldRequired("targetWWNs"))
 	}
-	if len(fc.FSType) == 0 {
+	if fc.FSType == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("fsType"))
 	}
 
@@ -489,10 +489,10 @@ func validateFCVolumeSource(fc *api.FCVolumeSource) errs.ValidationErrorList {
 
 func validateGCEPersistentDiskVolumeSource(PD *api.GCEPersistentDiskVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(PD.PDName) == 0 {
+	if PD.PDName == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("pdName"))
 	}
-	if len(PD.FSType) == 0 {
+	if PD.FSType == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("fsType"))
 	}
 	if PD.Partition < 0 || PD.Partition > 255 {
@@ -503,10 +503,10 @@ func validateGCEPersistentDiskVolumeSource(PD *api.GCEPersistentDiskVolumeSource
 
 func validateAWSElasticBlockStoreVolumeSource(PD *api.AWSElasticBlockStoreVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(PD.VolumeID) == 0 {
+	if PD.VolumeID == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("volumeID"))
 	}
-	if len(PD.FSType) == 0 {
+	if PD.FSType == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("fsType"))
 	}
 	if PD.Partition < 0 || PD.Partition > 255 {
@@ -517,7 +517,7 @@ func validateAWSElasticBlockStoreVolumeSource(PD *api.AWSElasticBlockStoreVolume
 
 func validateSecretVolumeSource(secretSource *api.SecretVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(secretSource.SecretName) == 0 {
+	if secretSource.SecretName == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("secretName"))
 	}
 	return allErrs
@@ -525,7 +525,7 @@ func validateSecretVolumeSource(secretSource *api.SecretVolumeSource) errs.Valid
 
 func validatePersistentClaimVolumeSource(claim *api.PersistentVolumeClaimVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(claim.ClaimName) == 0 {
+	if claim.ClaimName == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("claimName"))
 	}
 	return allErrs
@@ -533,10 +533,10 @@ func validatePersistentClaimVolumeSource(claim *api.PersistentVolumeClaimVolumeS
 
 func validateNFS(nfs *api.NFSVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(nfs.Server) == 0 {
+	if nfs.Server == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("server"))
 	}
-	if len(nfs.Path) == 0 {
+	if nfs.Path == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("path"))
 	}
 	if !path.IsAbs(nfs.Path) {
@@ -547,10 +547,10 @@ func validateNFS(nfs *api.NFSVolumeSource) errs.ValidationErrorList {
 
 func validateGlusterfs(glusterfs *api.GlusterfsVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(glusterfs.EndpointsName) == 0 {
+	if glusterfs.EndpointsName == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("endpoints"))
 	}
-	if len(glusterfs.Path) == 0 {
+	if glusterfs.Path == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("path"))
 	}
 	return allErrs
@@ -558,7 +558,7 @@ func validateGlusterfs(glusterfs *api.GlusterfsVolumeSource) errs.ValidationErro
 
 func validateFlocker(flocker *api.FlockerVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(flocker.DatasetName) == 0 {
+	if flocker.DatasetName == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("datasetName"))
 	}
 	if strings.Contains(flocker.DatasetName, "/") {
@@ -610,10 +610,10 @@ func validateRBD(rbd *api.RBDVolumeSource) errs.ValidationErrorList {
 	if len(rbd.CephMonitors) == 0 {
 		allErrs = append(allErrs, errs.NewFieldRequired("monitors"))
 	}
-	if len(rbd.RBDImage) == 0 {
+	if rbd.RBDImage == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("image"))
 	}
-	if len(rbd.FSType) == 0 {
+	if rbd.FSType == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("fsType"))
 	}
 	return allErrs
@@ -621,10 +621,10 @@ func validateRBD(rbd *api.RBDVolumeSource) errs.ValidationErrorList {
 
 func validateCinderVolumeSource(cd *api.CinderVolumeSource) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if len(cd.VolumeID) == 0 {
+	if cd.VolumeID == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("volumeID"))
 	}
-	if len(cd.FSType) == 0 || (cd.FSType != "ext3" && cd.FSType != "ext4") {
+	if cd.FSType == "" || (cd.FSType != "ext3" && cd.FSType != "ext4") {
 		allErrs = append(allErrs, errs.NewFieldRequired("fsType required and should be of type ext3 or ext4"))
 	}
 	return allErrs
@@ -733,7 +733,7 @@ func ValidatePersistentVolumeUpdate(newPv, oldPv *api.PersistentVolume) errs.Val
 func ValidatePersistentVolumeStatusUpdate(newPv, oldPv *api.PersistentVolume) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 	allErrs = append(allErrs, ValidateObjectMetaUpdate(&newPv.ObjectMeta, &oldPv.ObjectMeta).Prefix("metadata")...)
-	if len(newPv.ResourceVersion) == 0 {
+	if newPv.ResourceVersion == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("resourceVersion"))
 	}
 	newPv.Spec = oldPv.Spec
@@ -766,7 +766,7 @@ func ValidatePersistentVolumeClaimUpdate(newPvc, oldPvc *api.PersistentVolumeCla
 func ValidatePersistentVolumeClaimStatusUpdate(newPvc, oldPvc *api.PersistentVolumeClaim) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 	allErrs = append(allErrs, ValidateObjectMetaUpdate(&newPvc.ObjectMeta, &oldPvc.ObjectMeta).Prefix("metadata")...)
-	if len(newPvc.ResourceVersion) == 0 {
+	if newPvc.ResourceVersion == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("resourceVersion"))
 	}
 	if len(newPvc.Spec.AccessModes) == 0 {
@@ -857,9 +857,9 @@ func validateEnvVarValueFrom(ev api.EnvVar) errs.ValidationErrorList {
 func validateObjectFieldSelector(fs *api.ObjectFieldSelector, expressions *sets.String) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 
-	if len(fs.APIVersion) == 0 {
+	if fs.APIVersion == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("apiVersion"))
-	} else if len(fs.FieldPath) == 0 {
+	} else if fs.FieldPath == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("fieldPath"))
 	} else {
 		internalFieldPath, _, err := api.Scheme.ConvertFieldLabel(fs.APIVersion, "Pod", fs.FieldPath, "")
@@ -1265,7 +1265,7 @@ func ValidateService(service *api.Service) errs.ValidationErrorList {
 		allErrs = append(allErrs, ValidateLabels(service.Spec.Selector, "spec.selector")...)
 	}
 
-	if len(service.Spec.SessionAffinity) == 0 {
+	if service.Spec.SessionAffinity == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("spec.sessionAffinity"))
 	} else if !supportedSessionAffinityType.Has(string(service.Spec.SessionAffinity)) {
 		allErrs = append(allErrs, errs.NewFieldValueNotSupported("spec.sessionAffinity", service.Spec.SessionAffinity, supportedSessionAffinityType.List()))
@@ -1284,7 +1284,7 @@ func ValidateService(service *api.Service) errs.ValidationErrorList {
 		allErrs = append(allErrs, validateIpIsNotLinkLocalOrLoopback(ip, "spec.externalIPs")...)
 	}
 
-	if len(service.Spec.Type) == 0 {
+	if service.Spec.Type == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("spec.type"))
 	} else if !supportedServiceType.Has(string(service.Spec.Type)) {
 		allErrs = append(allErrs, errs.NewFieldValueNotSupported("spec.type", service.Spec.Type, supportedServiceType.List()))
@@ -1329,7 +1329,7 @@ func ValidateService(service *api.Service) errs.ValidationErrorList {
 func validateServicePort(sp *api.ServicePort, requireName bool, allNames *sets.String) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 
-	if requireName && len(sp.Name) == 0 {
+	if requireName && sp.Name == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("name"))
 	} else if sp.Name != "" {
 		if !validation.IsDNS1123Label(sp.Name) {
@@ -1831,7 +1831,7 @@ func ValidateResourceQuotaUpdate(newResourceQuota, oldResourceQuota *api.Resourc
 func ValidateResourceQuotaStatusUpdate(newResourceQuota, oldResourceQuota *api.ResourceQuota) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
 	allErrs = append(allErrs, ValidateObjectMetaUpdate(&newResourceQuota.ObjectMeta, &oldResourceQuota.ObjectMeta).Prefix("metadata")...)
-	if len(newResourceQuota.ResourceVersion) == 0 {
+	if newResourceQuota.ResourceVersion == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("resourceVersion"))
 	}
 	for k, v := range newResourceQuota.Status.Hard {
@@ -1979,7 +1979,7 @@ func validateIpIsNotLinkLocalOrLoopback(ipAddress, fieldName string) errs.Valida
 
 func validateEndpointPort(port *api.EndpointPort, requireName bool) errs.ValidationErrorList {
 	allErrs := errs.ValidationErrorList{}
-	if requireName && len(port.Name) == 0 {
+	if requireName && port.Name == "" {
 		allErrs = append(allErrs, errs.NewFieldRequired("name"))
 	} else if port.Name != "" {
 		if !validation.IsDNS1123Label(port.Name) {
