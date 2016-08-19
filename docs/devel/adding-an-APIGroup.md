@@ -64,7 +64,7 @@ meta through `latest.Group`. You probably only need to change the name of group
 and version in the [example](../../pkg/apis/extensions/install/install.go)). You
 need to import this `install` package in {pkg/master,
 pkg/client/unversioned}/import_known_versions.go, if you want to make your group
-accessible to other packages in the kube-apiserver binary, binaries that uses
+accessible to other packages in the kube-appraiser binary, binaries that uses
 the client package.
 
 Step 2 and 3 are mechanical, we plan on autogenerate these using the
